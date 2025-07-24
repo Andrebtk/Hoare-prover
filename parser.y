@@ -9,13 +9,28 @@
 %}
 
 /* Declare tokens here */
-%token IDENTIFIER NUMBER IF WHILE
-%token EQ SEMICOLON LPAREN RPAREN LBRACE RBRACE
+
+
+%token IF WHILE 
+%token SEMICOLON LPAREN RPAREN LBRACE RBRACE
 %token PLUS MINUS MUL DIV LT GT
+
+%token <id> IDENTIFIER 
+%token <num> NUMBER 
+
+%token ASSIGN    // '='
+%token EQ        // '=='
+%token NEQ       // '!='
+
 
 %left PLUS MINUS
 %left MUL DIV
 %left LT GT
+
+%union {
+	int num;
+	char *id;
+}
 
 %%
 /* Grammar rules and actions */
@@ -23,19 +38,13 @@ program:
 	statements
 	;
 
-comparison_operator:
-	  LT
-	| GT
-	;
-
 statement:
-	  IDENTIFIER EQ expr SEMICOLON			{ printf("Assignment\n"); }
-	| IF LPAREN condition RPAREN block 		{ printf("If statement\n"); }
-	| WHILE LPAREN condition RPAREN block 	{ printf("while loop\n"); }
+	  IDENTIFIER ASSIGN expr SEMICOLON			{ printf("Assignment\n"); }
+	| IF LPAREN condition RPAREN block 			{ printf("If statement\n"); }
+	| WHILE LPAREN condition RPAREN block 		{ printf("while loop\n"); }
 	;
 
 statements:
-
 	| statements statement
 	;
 
@@ -44,7 +53,10 @@ block:
 	;
 
 condition:
-	expr comparison_operator expr
+	  expr LT expr
+	| expr GT expr
+	| expr EQ expr
+	| expr NEQ expr
 	;
 
 expr:
@@ -54,6 +66,8 @@ expr:
 	| expr MINUS expr
 	| expr MUL expr
 	| expr DIV expr
+	| expr EQ expr
+	| expr NEQ expr
 	;
 
 %%

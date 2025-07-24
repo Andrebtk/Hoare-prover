@@ -1,19 +1,87 @@
 %{ 
 	#include <stdio.h>
+	#include "parser.tab.h"
 %}
 
 
 %%
-[a-zA-Z][a-zA-Z0-9]*	{ printf("ID: %s \n", yytext); }
-[0-9]+					{ printf("NUMBER %s\n", yytext); }
-"="						{ printf("ASSIGN %s\n", yytext); }
-"!="					{ printf("NOT EQUAL %s\n", yytext); }
-"+"						{ printf("PLUS %s\n", yytext); }
-"-"						{ printf("MINUS %s\n", yytext); }
-"*"						{ printf("MULT %s\n", yytext); }
+
+
+[0-9]+ { 
+	yylval.num = atoi(yytext);
+	return NUMBER;
+
+}
+
+"==" { 
+	return EQ;
+}
+
+"=" { 
+	return ASSIGN;
+}
+
+"!=" { 
+	return NEQ;
+}
+
+"+" { 
+	return PLUS;
+}
+
+"-" { 
+	return MINUS;
+}
+
+"*"						{ 
+	return MUL;
+}
+
 [ \t]+					;
-\n						{ printf("NEW LINE\n\n"); }
-";"						{ printf("SEMICOLON: ;\n"); }
+
+\n 						;
+
+
+";" { 
+	return SEMICOLON;
+}
+
+"if" {
+	return IF;
+}
+
+"while" {
+	return WHILE;
+}
+
+"(" {
+	return LPAREN;
+}
+
+")" {
+	return RPAREN;
+}
+
+"{" {
+	return LBRACE;
+}
+
+"}" {
+	return RBRACE;
+}
+
+"<" {
+	return LT;
+}
+
+">" {
+	return GT;
+}
+
+[a-zA-Z][a-zA-Z0-9]* { 
+	yylval.id = strdup(yytext);
+	return IDENTIFIER;
+}
 
 %%
 
