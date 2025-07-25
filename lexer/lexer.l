@@ -1,16 +1,14 @@
 %{ 
 	#include <stdio.h>
-	#include "parser.tab.h"
+	#include "parser/parser.tab.h"
 %}
 
 
 %%
 
-
 [0-9]+ { 
 	yylval.num = atoi(yytext);
 	return NUMBER;
-
 }
 
 "==" { 

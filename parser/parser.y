@@ -10,10 +10,10 @@
 
 /* Declare tokens here */
 
-
 %token IF WHILE 
 %token SEMICOLON LPAREN RPAREN LBRACE RBRACE
 %token PLUS MINUS MUL DIV LT GT
+
 
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
@@ -39,9 +39,17 @@ program:
 	;
 
 statement:
-	  IDENTIFIER ASSIGN expr SEMICOLON			{ printf("Assignment\n"); }
-	| IF LPAREN condition RPAREN block 			{ printf("If statement\n"); }
-	| WHILE LPAREN condition RPAREN block 		{ printf("while loop\n"); }
+	  IDENTIFIER ASSIGN expr SEMICOLON			{ 
+		printf("Assignment\n"); 
+	}
+
+	| IF LPAREN condition RPAREN block 			{ 
+		printf("If statement\n"); 
+	}
+
+	| WHILE LPAREN condition RPAREN block 		{ 
+		printf("while loop\n"); 
+	}
 	;
 
 statements:

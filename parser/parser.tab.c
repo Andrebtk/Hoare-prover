@@ -66,7 +66,7 @@
 
 
 /* First part of user prologue.  */
-#line 1 "parser.y"
+#line 1 "parser/parser.y"
  
 	/* C declarations: includes, helper functions, variables */
 	#include <stdio.h>
@@ -76,7 +76,7 @@
 	int yylex(void);
 
 
-#line 80 "parser.tab.c"
+#line 80 "parser/parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -109,8 +109,8 @@
 
 /* Use api.header.include to #include this header
    instead of duplicating it here.  */
-#ifndef YY_YY_PARSER_TAB_H_INCLUDED
-# define YY_YY_PARSER_TAB_H_INCLUDED
+#ifndef YY_YY_PARSER_PARSER_TAB_H_INCLUDED
+# define YY_YY_PARSER_PARSER_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -149,12 +149,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 30 "parser.y"
+#line 30 "parser/parser.y"
 
 	int num;
 	char *id;
 
-#line 158 "parser.tab.c"
+#line 158 "parser/parser.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -167,7 +167,7 @@ extern YYSTYPE yylval;
 
 int yyparse (void);
 
-#endif /* !YY_YY_PARSER_TAB_H_INCLUDED  */
+#endif /* !YY_YY_PARSER_PARSER_TAB_H_INCLUDED  */
 
 
 
@@ -531,9 +531,9 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    38,    38,    42,    43,    44,    47,    48,    52,    56,
-      57,    58,    59,    63,    64,    65,    66,    67,    68,    69,
-      70
+       0,    38,    38,    42,    45,    48,    53,    54,    58,    62,
+      63,    64,    65,    69,    70,    71,    72,    73,    74,    75,
+      76
 };
 #endif
 
@@ -1354,25 +1354,31 @@ yyreduce:
   switch (yyn)
     {
   case 3:
-#line 42 "parser.y"
-                                                                { printf("Assignment\n"); }
-#line 1360 "parser.tab.c"
+#line 42 "parser/parser.y"
+                                                                { 
+		printf("Assignment\n"); 
+	}
+#line 1362 "parser/parser.tab.c"
     break;
 
   case 4:
-#line 43 "parser.y"
-                                                                { printf("If statement\n"); }
-#line 1366 "parser.tab.c"
+#line 45 "parser/parser.y"
+                                                                { 
+		printf("If statement\n"); 
+	}
+#line 1370 "parser/parser.tab.c"
     break;
 
   case 5:
-#line 44 "parser.y"
-                                                        { printf("while loop\n"); }
-#line 1372 "parser.tab.c"
+#line 48 "parser/parser.y"
+                                                        { 
+		printf("while loop\n"); 
+	}
+#line 1378 "parser/parser.tab.c"
     break;
 
 
-#line 1376 "parser.tab.c"
+#line 1382 "parser/parser.tab.c"
 
       default: break;
     }
@@ -1604,7 +1610,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 73 "parser.y"
+#line 79 "parser/parser.y"
 
 
 /* Additional C code (functions, main, helpers) */
