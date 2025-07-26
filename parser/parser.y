@@ -18,6 +18,9 @@
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
 
+%type <num> expr condition
+%type <num> block statements
+
 %token ASSIGN    // '='
 %token EQ        // '=='
 %token NEQ       // '!='
@@ -40,7 +43,7 @@ program:
 
 statement:
 	  IDENTIFIER ASSIGN expr SEMICOLON			{ 
-		printf("Assignment\n"); 
+		printf("Assignment %s = %d\n", $1, $3); 
 	}
 
 	| IF LPAREN condition RPAREN block 			{ 
@@ -57,25 +60,25 @@ statements:
 	;
 
 block:
-	LBRACE statements RBRACE
+	LBRACE statements RBRACE {  }
 	;
 
 condition:
-	  expr LT expr
-	| expr GT expr
-	| expr EQ expr
-	| expr NEQ expr
+	  expr LT expr 			{ $$ = ($1 < $3); }
+	| expr GT expr			{ $$ = ($1 > $3); }
+	| expr EQ expr			{ $$ = ($1 = $3); }
+	| expr NEQ expr			{ $$ = ($1 != $3); }
 	;
 
 expr:
-	  NUMBER
-	| IDENTIFIER
-	| expr PLUS expr
-	| expr MINUS expr
-	| expr MUL expr
-	| expr DIV expr
-	| expr EQ expr
-	| expr NEQ expr
+	  NUMBER				{ $$ = $1; }
+	| IDENTIFIER			{ /*printf("Variable use: %s\n", $1);*/ $$ = 0; }
+	| expr PLUS expr		{ $$ = $1 + $3; }
+	| expr MINUS expr		{ $$ = $1 - $3; }
+	| expr MUL expr			{ $$ = $1 * $3; }
+	| expr DIV expr			{ $$ = $1 / $3; }
+	| expr EQ expr			{ $$ = ($1 = $3); }
+	| expr NEQ expr			{ $$ = ($1 != $3); }
 	;
 
 %%
