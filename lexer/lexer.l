@@ -1,6 +1,8 @@
 %{ 
 	#include <stdio.h>
+	#include "data-struct.h"
 	#include "parser/parser.tab.h"
+	
 %}
 
 

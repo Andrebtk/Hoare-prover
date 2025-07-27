@@ -1,8 +1,14 @@
+#ifndef DATA_STRUCT_H
+#define DATA_STRUCT_H
+
 #include <stdio.h>
 
 typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF, NODE_WHILE, NODE_NUMBER, NODE_ID, NODE_BLOCK} NodeType;
-typedef enum { num, id, plus, minus, mul, div } TypeExpr;
+typedef enum { num, id, plus, minus, mul, div2 } TypeExpr;
 typedef enum { lt, gt, eq, neq } TypeCondition;
+
+struct DLL_;
+typedef struct DLL_ DLL;
 
 typedef struct ASTNode_ {
 	NodeType type;
@@ -16,7 +22,7 @@ typedef struct ASTNode_ {
 		
 		struct {
 			struct ASTNode_* condition;
-			struct DLL* block;
+			DLL* block;
 		} If_While;
 
 		struct {
@@ -24,6 +30,9 @@ typedef struct ASTNode_ {
 			struct ASTNode_* left;
 			struct ASTNode_* right;
 		} binary_op;
+
+		int number;
+		char* id_name;
 	};
 	
 
@@ -41,11 +50,26 @@ typedef struct DLL_ {
 
 
 
-ASTNode* create_node_assign();
-ASTNode* create_node_Expression();
+ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right);
+ASTNode* create_node_number(int num);
+ASTNode* create_node_id(char *input);
+ASTNode* create_node_assign(char* id, ASTNode* expr);
+ASTNode* create_node_If(ASTNode* condition, DLL* block);
+ASTNode* create_node_While(ASTNode* condition, DLL* block);
+
+DLL* create_DLL();
+line_linkedlist* create_ll(ASTNode* node);
+void DLL_append(DLL* list, ASTNode* node);
+
+void print_ASTNode(ASTNode* node);
+void print_line_linkedlist(line_linkedlist* list);
+void print_DLL(DLL* dll);
 
 /*
 data structure for each type of statement 
 1st type of node -> identifier/NUMbers etc
 2nd type of node -> expr/ assign/ if/ while
 */
+
+
+#endif

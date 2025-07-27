@@ -115,6 +115,9 @@
 	/* C declarations: includes, helper functions, variables */
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include "data-struct.h"
+
+	DLL* root = NULL;
 
 	void yyerror(const char *s);
 	int yylex(void);
@@ -141,13 +144,15 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 33 "parser/parser.y"
+#line 15 "parser/parser.y"
 {
 	int num;
 	char *id;
+	ASTNode* node;
+	DLL* dll;
 }
 /* Line 193 of yacc.c.  */
-#line 151 "parser/parser.tab.c"
+#line 156 "parser/parser.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -160,7 +165,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 164 "parser/parser.tab.c"
+#line 169 "parser/parser.tab.c"
 
 #ifdef short
 # undef short
@@ -452,9 +457,9 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    41,    41,    45,    49,    53,    58,    59,    63,    67,
-      68,    69,    70,    74,    75,    76,    77,    78,    79,    80,
-      81
+       0,    47,    47,    53,    57,    61,    67,    68,    75,    79,
+      80,    81,    82,    86,    87,    88,    89,    90,    91,    92,
+      93
 };
 #endif
 
@@ -1386,95 +1391,115 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 3:
-#line 45 "parser/parser.y"
+        case 2:
+#line 47 "parser/parser.y"
+    {
+		root = (yyvsp[(1) - (1)].dll);
+	;}
+    break;
+
+  case 3:
+#line 53 "parser/parser.y"
     { 
-		printf("Assignment %s = %d\n", (yyvsp[(1) - (4)].id), (yyvsp[(3) - (4)].num)); 
+		(yyval.node) = create_node_assign((yyvsp[(1) - (4)].id), (yyvsp[(3) - (4)].node));
 	;}
     break;
 
   case 4:
-#line 49 "parser/parser.y"
+#line 57 "parser/parser.y"
     { 
-		printf("If statement\n"); 
+		(yyval.node) = create_node_If((yyvsp[(3) - (5)].node), (yyvsp[(5) - (5)].dll));
 	;}
     break;
 
   case 5:
-#line 53 "parser/parser.y"
+#line 61 "parser/parser.y"
     { 
-		printf("while loop\n"); 
+		(yyval.node) = create_node_While((yyvsp[(3) - (5)].node), (yyvsp[(5) - (5)].dll));
+	;}
+    break;
+
+  case 6:
+#line 67 "parser/parser.y"
+    { (yyval.dll) = create_DLL(); ;}
+    break;
+
+  case 7:
+#line 68 "parser/parser.y"
+    { 
+		DLL_append((yyvsp[(1) - (2)].dll), (yyvsp[(2) - (2)].node)); 
+		(yyval.dll) = (yyvsp[(1) - (2)].dll);
 	;}
     break;
 
   case 8:
-#line 63 "parser/parser.y"
-    {  ;}
+#line 75 "parser/parser.y"
+    { (yyval.dll) = (yyvsp[(2) - (3)].dll); ;}
     break;
 
   case 9:
-#line 67 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) < (yyvsp[(3) - (3)].num)); ;}
+#line 79 "parser/parser.y"
+    { (yyval.node) = create_node_binary("<", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 10:
-#line 68 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) > (yyvsp[(3) - (3)].num)); ;}
+#line 80 "parser/parser.y"
+    { (yyval.node) = create_node_binary(">", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 11:
-#line 69 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) = (yyvsp[(3) - (3)].num)); ;}
+#line 81 "parser/parser.y"
+    { (yyval.node) = create_node_binary("==", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 12:
-#line 70 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) != (yyvsp[(3) - (3)].num)); ;}
+#line 82 "parser/parser.y"
+    { (yyval.node) = create_node_binary("!=", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 13:
-#line 74 "parser/parser.y"
-    { (yyval.num) = (yyvsp[(1) - (1)].num); ;}
+#line 86 "parser/parser.y"
+    { (yyval.node) = create_node_number((yyvsp[(1) - (1)].num)); ;}
     break;
 
   case 14:
-#line 75 "parser/parser.y"
-    { /*printf("Variable use: %s\n", $1);*/ (yyval.num) = 0; ;}
+#line 87 "parser/parser.y"
+    { (yyval.node) = create_node_id((yyvsp[(1) - (1)].id)); ;}
     break;
 
   case 15:
-#line 76 "parser/parser.y"
-    { (yyval.num) = (yyvsp[(1) - (3)].num) + (yyvsp[(3) - (3)].num); ;}
+#line 88 "parser/parser.y"
+    { (yyval.node) = create_node_binary("+", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 16:
-#line 77 "parser/parser.y"
-    { (yyval.num) = (yyvsp[(1) - (3)].num) - (yyvsp[(3) - (3)].num); ;}
+#line 89 "parser/parser.y"
+    { (yyval.node) = create_node_binary("-", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 17:
-#line 78 "parser/parser.y"
-    { (yyval.num) = (yyvsp[(1) - (3)].num) * (yyvsp[(3) - (3)].num); ;}
+#line 90 "parser/parser.y"
+    { (yyval.node) = create_node_binary("*", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 18:
-#line 79 "parser/parser.y"
-    { (yyval.num) = (yyvsp[(1) - (3)].num) / (yyvsp[(3) - (3)].num); ;}
+#line 91 "parser/parser.y"
+    { (yyval.node) = create_node_binary("/", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 19:
-#line 80 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) = (yyvsp[(3) - (3)].num)); ;}
+#line 92 "parser/parser.y"
+    { (yyval.node) = create_node_binary("==", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
   case 20:
-#line 81 "parser/parser.y"
-    { (yyval.num) = ((yyvsp[(1) - (3)].num) != (yyvsp[(3) - (3)].num)); ;}
+#line 93 "parser/parser.y"
+    { (yyval.node) = create_node_binary("!=", (yyvsp[(1) - (3)].node), (yyvsp[(3) - (3)].node)); ;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1478 "parser/parser.tab.c"
+#line 1503 "parser/parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1688,7 +1713,7 @@ yyreturn:
 }
 
 
-#line 84 "parser/parser.y"
+#line 96 "parser/parser.y"
 
 
 /* Additional C code (functions, main, helpers) */
@@ -1697,7 +1722,17 @@ void yyerror(const char *s) {
 }
 
 int main() {
+
 	printf("Start parsing...\n");
-	yyparse();
-	return 0;
+    if (yyparse() == 0) {
+        printf("Parsing done.\n");
+        // root now points to your DLL with all statements
+
+		print_DLL(root);
+    } else {
+        printf("Parsing failed.\n");
+    }
+
+    return 0;
+
 }
