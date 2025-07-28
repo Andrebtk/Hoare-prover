@@ -61,9 +61,9 @@ DLL* create_DLL();
 line_linkedlist* create_ll(ASTNode* node);
 void DLL_append(DLL* list, ASTNode* node);
 
-void print_ASTNode(ASTNode* node);
-void print_line_linkedlist(line_linkedlist* list);
-void print_DLL(DLL* dll);
+void print_ASTNode(ASTNode* node, int iter, int prof);
+void print_line_linkedlist(line_linkedlist* list, int prof);
+void print_DLL(DLL* dll, int prof);
 
 /*
 data structure for each type of statement 

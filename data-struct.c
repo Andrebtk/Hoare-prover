@@ -85,7 +85,25 @@ void DLL_append(DLL* list, ASTNode* node) {
     }
 }
 
-void print_ASTNode(ASTNode* node) {
+void print_line(int iter) {
+	if(iter != -1) {
+		if(iter == 1) {
+			printf("1st instruction: \n");
+		}else {
+			printf("%dnd instruction: \n", iter);
+		}
+	}
+}
+
+void print_prof(int prof) {
+	for (int i=0; i<prof; i++) {
+		printf("\t");
+	}
+}
+
+
+
+void print_ASTNode(ASTNode* node, int iter, int prof) {
     if(node == NULL) {
         printf("node is NULL");
         return;
@@ -93,77 +111,131 @@ void print_ASTNode(ASTNode* node) {
     
     switch(node->type) {
         case NODE_BIN_OP: {
+			print_line(iter);
+			print_prof(prof);
             printf("Node binary: %s\n", node->binary_op.op);
-            printf("Left node: ");
-            print_ASTNode(node->binary_op.left);
-            printf("Right node: ");
-            print_ASTNode(node->binary_op.right);
+			
+			print_prof(prof);
+            printf("Left node: \n");
+            print_ASTNode(node->binary_op.left, -1, prof+1);
+            
+			print_prof(prof);
+			printf("Right node: \n");
+            print_ASTNode(node->binary_op.right, -1, prof+1);
             break;
         };
 
         case NODE_ID: {
-            printf("Node ID: %s\n", node->id_name);
+			print_line(iter);
+			print_prof(prof);
+            printf("Node ID: \n");
+			print_prof(prof+1);
+			printf("%s\n",node->id_name);
 
             break;
         };
 
         case NODE_NUMBER: {
-            printf("Node NUMBER: %d\n", node->number);
+			print_line(iter);
+			print_prof(prof);
+            printf("Node NUMBER: \n");
+
+			print_prof(prof+1);
+			printf("%d", node->number);
+			printf("\n");
             break;
         };
 
         case NODE_ASSIGN: {
-            printf("Node ASSIGN: %s\n", node->Assign.id);
-            printf("Expr: ");
-            print_ASTNode(node->Assign.expr);
+			print_prof(prof-1);
+			print_line(iter);
+
+			print_prof(prof);
+            printf("Node ASSIGN: \n");
+
+			print_prof(prof);
+			printf("left: %s\n",node->Assign.id);
+            
+			print_prof(prof);
+			printf("Expr: \n");
+            print_ASTNode(node->Assign.expr, -1, prof+1);
             printf("\n");
 
             break;
         };
 
         case NODE_IF: {
+			print_line(iter);
+			print_prof(prof);
             printf("Node IF:\n");
-            printf("condition : ");
-            print_ASTNode(node->If_While.condition);
-            printf("\nblock : ");
-            print_DLL(node->If_While.block);
+			
+			print_prof(prof);
+            printf("condition : \n");
+            print_ASTNode(node->If_While.condition, -1, prof+1);
+			
+			printf("\n");
+			print_prof(prof);
+            printf("block : \n");
+
+            //print_prof(prof+1);
+			print_DLL(node->If_While.block, prof+1);
+			printf("\n");
             break;
         };
 
         case NODE_WHILE: {
-           printf("Node WHILE:\n");
-            printf("condition : ");
-            print_ASTNode(node->If_While.condition);
-            printf("\nblock : ");
-            print_DLL(node->If_While.block);
+			print_prof(prof-1);
+			print_line(iter);
+			print_prof(prof);
+          	printf("Node WHILE:\n");
+			
+			print_prof(prof);
+            printf("condition : \n");
+            print_ASTNode(node->If_While.condition, -1, prof+1);
+
+
+			printf("\n");
+			print_prof(prof);
+            printf("block : \n");
+            print_DLL(node->If_While.block, prof+1);
+			printf("\n");
             break;
         };
 
         case NODE_BLOCK: {
+			print_prof(prof);
+			print_line(iter);
             printf("Node block");
+			printf("\n");
             break;
         };
         
         default:
+			print_line(iter);
             printf("Unknown node type: %d\n", node->type);
+			printf("\n");
             break;
     }
     
     
 }
 
-void print_line_linkedlist(line_linkedlist* list) {
+void print_line_linkedlist(line_linkedlist* list, int prof) {
+	int num = 1;
+	int p = 1 + prof;
+
     while(list != NULL) {
         if (list->node == NULL) {
             printf("Null node in linked list\n");
         } else {
-           print_ASTNode(list->node);
+           print_ASTNode(list->node, num, p);
         }
         list = list->next;
-    }
+		num++;
+	}
 }
 
-void print_DLL(DLL* dll) {
+void print_DLL(DLL* dll, int prof) {
     if(dll == NULL) {
         printf("DLL is NULL\n");
         return;
@@ -171,7 +243,7 @@ void print_DLL(DLL* dll) {
     if(dll->first == NULL ){
         printf("DLL first is NULL\n");
     }
-    print_line_linkedlist(dll->first);
+    print_line_linkedlist(dll->first, prof);
     
    
 }

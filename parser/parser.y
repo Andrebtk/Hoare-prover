@@ -107,7 +107,7 @@ int main() {
         printf("Parsing done.\n");
         // root now points to your DLL with all statements
 
-		print_DLL(root);
+		print_DLL(root, 0);
     } else {
         printf("Parsing failed.\n");
     }
