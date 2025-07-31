@@ -21,14 +21,15 @@
 
 
 %token IF WHILE 
-%token SEMICOLON LPAREN RPAREN LBRACE RBRACE
-%token PLUS MINUS MUL DIV LT GT
+%token SEMICOLON LPAREN RPAREN LBRACE RBRACE COLON
+%token PLUS MINUS MUL DIV LT GT AND OR
+%token PRECOND POSTCOND 
 
 
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
 
-%type <node> statement expr condition
+%type <node> statement expr condition precond postcond
 %type <dll> block statements
 
 %token ASSIGN    // '='
@@ -39,15 +40,35 @@
 %left PLUS MINUS
 %left MUL DIV
 %left LT GT
+%left AND
+%left OR
+%left EQ NEQ
 
 
 %%
 /* Grammar rules and actions */
 program:
-	statements {
+	statements precond postcond {
+		
 		root = $1;
+		root->pre = $2;
+		root->post = $3;
 	}
 	;
+
+precond: 
+	PRECOND expr {
+		$$ = $2;
+		
+	}
+	;
+
+postcond:
+	POSTCOND expr {
+		$$ = $2;
+	}
+	;
+
 
 statement:
 	  IDENTIFIER ASSIGN expr SEMICOLON			{ 
@@ -64,7 +85,9 @@ statement:
 	;
 
 statements:
-								{ $$ = create_DLL(); }
+	  							{
+		$$ = create_DLL(); 
+	  }
 	| statements statement		{ 
 		DLL_append($1, $2); 
 		$$ = $1;
@@ -85,12 +108,16 @@ condition:
 expr:
 	  NUMBER				{ $$ = create_node_number($1); }
 	| IDENTIFIER			{ $$ = create_node_id($1); }
+	| expr EQ expr			{ $$ = create_node_binary("==", $1, $3); }
+	| expr NEQ expr			{ $$ = create_node_binary("!=", $1, $3); }
+	| expr AND expr 		{ $$ = create_node_binary("and", $1, $3); }
+	| expr OR expr 			{ $$ = create_node_binary("or", $1, $3);  }
 	| expr PLUS expr		{ $$ = create_node_binary("+", $1, $3); }
 	| expr MINUS expr		{ $$ = create_node_binary("-", $1, $3); }
 	| expr MUL expr			{ $$ = create_node_binary("*", $1, $3); }
 	| expr DIV expr			{ $$ = create_node_binary("/", $1, $3); }
-	| expr EQ expr			{ $$ = create_node_binary("==", $1, $3); }
-	| expr NEQ expr			{ $$ = create_node_binary("!=", $1, $3); }
+	
+
 	;
 
 %%

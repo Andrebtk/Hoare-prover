@@ -59,6 +59,8 @@ ASTNode* create_node_While(ASTNode* condition, DLL* block){
     return res;
 }
 
+
+
 DLL* create_DLL() {
     DLL* res = malloc(sizeof(DLL));
     res->first = NULL;
@@ -209,6 +211,7 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			printf("\n");
             break;
         };
+
         
         default:
 			print_line(iter);
@@ -240,10 +243,16 @@ void print_DLL(DLL* dll, int prof) {
         printf("DLL is NULL\n");
         return;
     }
+
     if(dll->first == NULL ){
         printf("DLL first is NULL\n");
     }
     print_line_linkedlist(dll->first, prof);
     
+    printf("PRECONDITON: \n");
+    print_ASTNode(dll->pre, 1, prof+1);
+
+    printf("POSTCONDITON: \n");
+    print_ASTNode(dll->post, 1, prof+1);
    
 }

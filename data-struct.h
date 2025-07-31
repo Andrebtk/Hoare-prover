@@ -46,6 +46,8 @@ typedef struct line_linkedlist_ {
 typedef struct DLL_ {
 	line_linkedlist* first;
 	line_linkedlist* last;
+	ASTNode *pre;
+	ASTNode *post;
 } DLL;
 
 

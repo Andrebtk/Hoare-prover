@@ -78,10 +78,38 @@
 	return GT;
 }
 
+"PRECONDITON:" {
+	return PRECOND;
+}
+
+"POSTCONDITON:" {
+	return POSTCOND;
+}
+
+"AND" {
+	return AND;
+}
+
+"and" {
+	return AND;
+}
+
+"OR" {
+	return OR;
+}
+
+"or" {
+	return OR;
+}
+
+
+
 [a-zA-Z][a-zA-Z0-9]* { 
 	yylval.id = strdup(yytext);
 	return IDENTIFIER;
 }
+
+
 
 %%
 
