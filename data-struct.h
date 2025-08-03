@@ -52,6 +52,22 @@ typedef struct DLL_ {
 
 
 
+// HashMap
+typedef struct HashEntry_ {
+	char *key;
+	ASTNode* value;
+	struct HashEntry_* next;
+} HashEntry;
+
+typedef struct HashMap_ {
+	int size;
+	HashEntry** table;
+} HashMap;
+
+
+
+
+
 ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right);
 ASTNode* create_node_number(int num);
 ASTNode* create_node_id(char *input);
@@ -67,11 +83,8 @@ void print_ASTNode(ASTNode* node, int iter, int prof);
 void print_line_linkedlist(line_linkedlist* list, int prof);
 void print_DLL(DLL* dll, int prof);
 
-/*
-data structure for each type of statement 
-1st type of node -> identifier/NUMbers etc
-2nd type of node -> expr/ assign/ if/ while
-*/
 
+HashMap* create_HashMap(int size);
+int hash(HashMap* h,const char* str);
 
 #endif
