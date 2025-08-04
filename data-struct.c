@@ -71,20 +71,22 @@ DLL* create_DLL() {
 line_linkedlist* create_ll(ASTNode* node) {
     line_linkedlist* list = malloc(sizeof(line_linkedlist));
     list->next = NULL;
+	list->prec = NULL;
     list->node=node;
     return list;
 }
 
 void DLL_append(DLL* list, ASTNode* node) {
-    line_linkedlist* l = create_ll(node);
-    
-    if(list->last == NULL) {    //0 element in list
-        list->first = l;
-        list->last = l;
-    } else {
-        list->last->next = l;
-        list->last = l;
-    }
+	line_linkedlist* l = create_ll(node);
+
+	if(list->last == NULL) {    //0 element in list
+		list->first = l;
+		list->last = l;
+	} else {
+		list->last->next = l;
+		l->prec = list->last;
+		list->last = l;
+	}
 }
 
 void print_line(int iter) {
@@ -317,4 +319,194 @@ void insert_HashMap(HashMap* h, const char* name, ASTNode* node) {
 
     prev->next = n;
     
+}
+
+
+ASTNode* clone_node(const ASTNode* orig) {
+	switch (orig->type) {
+
+		case NODE_ASSIGN: {
+			
+			ASTNode* expr = clone_node(orig->Assign.expr);
+			return create_node_assign(orig->Assign.id, expr);
+			break;
+		}
+
+		case NODE_BIN_OP: {
+
+			ASTNode* left = clone_node(orig->binary_op.left);
+			ASTNode* right = clone_node(orig->binary_op.right);
+
+			return create_node_binary(orig->binary_op.op, left, right);
+			break;
+		}
+
+		case NODE_IF: {
+
+
+
+			break;
+		}
+
+		case NODE_WHILE: {
+
+
+			break;
+		}
+
+		case NODE_NUMBER: {
+			return create_node_number(orig->number);
+
+			break;
+		}
+
+		case NODE_ID: {
+			return create_node_id(orig->id_name);
+
+			break;
+		}
+
+		case NODE_BLOCK: {
+
+
+			break;
+		}
+	}
+}
+
+
+ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
+	if (formula == NULL) return NULL;
+
+	switch (formula->type) {
+		case NODE_ASSIGN: {
+
+			ASTNode* new_expr = substitute(formula->Assign.expr, var, replacement);
+			return create_node_assign(formula->Assign.id, new_expr);
+			break;
+		}
+
+
+		case NODE_BIN_OP: {
+
+			ASTNode* left = substitute(formula->binary_op.left, var, replacement);
+			ASTNode* right = substitute(formula->binary_op.right, var, replacement);
+			return create_node_binary(formula->binary_op.op, left, right);
+
+			break;
+		}
+
+
+		case NODE_IF: {
+
+			break;
+		}
+
+		case NODE_WHILE: {
+
+			break;
+		}
+
+
+		case NODE_NUMBER: {
+			return create_node_number(formula->number);
+			break;
+		}
+
+		case NODE_ID: {
+			if(strcmp(formula->id_name, var) == 0) {
+				return clone_node(replacement);
+			}
+			else {
+				return create_node_id(formula->id_name);
+			}
+			break;
+		}
+
+		case NODE_BLOCK: {
+
+
+		}
+
+	}
+}
+
+
+
+void hoare_prover(DLL* code) {
+	line_linkedlist *current = code->last;
+	ASTNode* hoare_interline = code->post;
+
+
+	while(current != NULL){
+		hoare_interline = substitute(hoare_interline, current->node->Assign.id, current->node->Assign.expr);
+		current = current->prec;
+	}
+	print_ASTNode(hoare_interline, -1, 1);
+	
+
+	if(code->pre->type == NODE_NUMBER && code->pre->number == 0){
+		int res = evaluate_formula(hoare_interline);
+		printf("\nResult: ");
+
+		if(res == 0) {
+			printf(RED "The program is not valid\n" RESET);
+		} else {
+			printf(GREEN "The program is valid\n" RESET);
+		}
+	}
+	
+}
+
+
+// 2) Logical & comparison evaluator
+int evaluate_formula(ASTNode* node) {
+	switch (node->type) {
+		case NODE_BIN_OP : {
+
+
+			if( strcmp(node->binary_op.op, "AND")==0 || strcmp(node->binary_op.op, "and")==0 ) 
+				return evaluate_formula(node->binary_op.left) 
+						&& evaluate_formula(node->binary_op.right);
+
+			if( strcmp(node->binary_op.op, "OR")==0 || strcmp(node->binary_op.op, "or")==0 ) 
+				return evaluate_formula(node->binary_op.left) 
+						|| evaluate_formula(node->binary_op.right);
+			
+			int L = evaluate_expr(node->binary_op.left);
+			int R = evaluate_expr(node->binary_op.right);
+
+			if( strcmp(node->binary_op.op, "==")==0 ) return L == R;
+			if( strcmp(node->binary_op.op, "!=")==0 ) return L != R;
+			if( strcmp(node->binary_op.op, "<")==0 ) return L < R;
+			if( strcmp(node->binary_op.op, ">")==0 ) return L > R;
+
+
+			break;
+		}
+	}
+}
+
+
+// 1) Arithmetic evaluator
+int evaluate_expr (ASTNode* node) {
+
+	switch (node->type) {
+		case NODE_NUMBER: {
+			return node->number;
+			break;
+		}
+
+		case NODE_BIN_OP: {
+			int L = evaluate_expr(node->binary_op.left);
+			int R = evaluate_expr(node->binary_op.right);
+			if (strcmp(node->binary_op.op, "+")==0)    return L + R;
+			if (strcmp(node->binary_op.op, "-")==0)    return L - R;
+			if (strcmp(node->binary_op.op, "*")==0)    return L * R;
+			if (strcmp(node->binary_op.op, "/")==0)    return L / R;
+
+			break;
+		}
+	}
+	
 }

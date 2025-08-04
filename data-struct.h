@@ -2,6 +2,10 @@
 #define DATA_STRUCT_H
 
 #include <stdio.h>
+#define RED     "\033[31m"      /* Red */
+#define GREEN   "\033[32m"      /* Green */
+#define RESET   "\033[0m"
+
 
 typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF, NODE_WHILE, NODE_NUMBER, NODE_ID, NODE_BLOCK} NodeType;
 typedef enum { num, id, plus, minus, mul, div2 } TypeExpr;
@@ -41,6 +45,7 @@ typedef struct ASTNode_ {
 typedef struct line_linkedlist_ {
 	ASTNode *node;
 	struct line_linkedlist_* next;
+	struct line_linkedlist_* prec;
 } line_linkedlist;
 
 typedef struct DLL_ {
@@ -86,5 +91,14 @@ void print_DLL(DLL* dll, int prof);
 
 HashMap* create_HashMap(int size);
 int hash(HashMap* h,const char* str);
+void insert_HashMap(HashMap* h, const char* name, ASTNode* node);
+
+
+ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
+ASTNode* clone_node(const ASTNode* orig);
+void hoare_prover(DLL* code);
+int evaluate_formula(ASTNode* node);
+int evaluate_expr (ASTNode* node);
+
 
 #endif

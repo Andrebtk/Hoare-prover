@@ -43,6 +43,7 @@
 %left AND
 %left OR
 %left EQ NEQ
+%right ASSIGN
 
 
 %%
@@ -116,6 +117,7 @@ expr:
 	| expr MINUS expr		{ $$ = create_node_binary("-", $1, $3); }
 	| expr MUL expr			{ $$ = create_node_binary("*", $1, $3); }
 	| expr DIV expr			{ $$ = create_node_binary("/", $1, $3); }
+	//| IDENTIFIER ASSIGN expr  { $$ = create_node_assign($1, $3); }
 	
 
 	;
@@ -134,11 +136,13 @@ int main() {
         printf("Parsing done.\n");
         // root now points to your DLL with all statements
 
-		print_DLL(root, 0);
+		//print_DLL(root, 0);
     } else {
         printf("Parsing failed.\n");
     }
 
+	printf("Starting verify:\n");
+	hoare_prover(root);
     return 0;
 
 }
