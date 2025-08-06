@@ -1,6 +1,13 @@
-y = 1 + 3;
-z = 1 + y;
-z = z + 1;
+x = 1;
+y = 5;
+
+if (x>y) {
+    z = y;
+} else {
+    z = x;
+}
+
+
 
 PRECONDITON: 0
-POSTCONDITON: y==4 AND z==6
+POSTCONDITON: min(x,y) == z

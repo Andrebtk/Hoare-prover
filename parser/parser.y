@@ -20,11 +20,13 @@
 }
 
 
-%token IF WHILE 
+%token IF ELSE WHILE 
 %token SEMICOLON LPAREN RPAREN LBRACE RBRACE COLON
 %token PLUS MINUS MUL DIV LT GT AND OR
 %token PRECOND POSTCOND 
 
+%token MIN MAX
+%token COMMA
 
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
@@ -72,17 +74,21 @@ postcond:
 
 
 statement:
-	  IDENTIFIER ASSIGN expr SEMICOLON			{ 
+
+ 	IDENTIFIER ASSIGN expr SEMICOLON					{ 
 		$$ = create_node_assign($1, $3);
 	}
 
-	| IF LPAREN condition RPAREN block 			{ 
-		$$ = create_node_If($3, $5);
+	| IF LPAREN condition RPAREN block ELSE block		{ 
+		$$ = create_node_If_Else($3, $5, $7);
 	}
 
-	| WHILE LPAREN condition RPAREN block 		{ 
+	| WHILE LPAREN condition RPAREN block 				{ 
 		$$ = create_node_While($3, $5);
 	}
+
+	
+	
 	;
 
 statements:
@@ -117,6 +123,13 @@ expr:
 	| expr MINUS expr		{ $$ = create_node_binary("-", $1, $3); }
 	| expr MUL expr			{ $$ = create_node_binary("*", $1, $3); }
 	| expr DIV expr			{ $$ = create_node_binary("/", $1, $3); }
+	| MIN LPAREN expr COMMA expr RPAREN 				{
+		$$ = create_node_Func("min",$3, $5);
+	}
+
+	| MAX LPAREN expr COMMA expr RPAREN 				{
+		$$ = create_node_Func("max",$3, $5);
+	}
 	//| IDENTIFIER ASSIGN expr  { $$ = create_node_assign($1, $3); }
 	
 
@@ -136,13 +149,14 @@ int main() {
         printf("Parsing done.\n");
         // root now points to your DLL with all statements
 
-		//print_DLL(root, 0);
+		print_DLL(root, 0, 0);
     } else {
         printf("Parsing failed.\n");
+		return -1;
     }
 
 	printf("Starting verify:\n");
-	hoare_prover(root);
+	//hoare_prover(root);
     return 0;
 
 }

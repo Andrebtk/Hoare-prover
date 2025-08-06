@@ -13,12 +13,24 @@
 	return NUMBER;
 }
 
+"min" {
+	return MIN;
+}
+
+"max" {
+	return MAX;
+}
+
 "==" { 
 	return EQ;
 }
 
 "=" { 
 	return ASSIGN;
+}
+
+"," {
+	return COMMA;
 }
 
 "!=" { 
@@ -48,6 +60,10 @@
 
 "if" {
 	return IF;
+}
+
+"else" { 
+	return ELSE;
 }
 
 "while" {

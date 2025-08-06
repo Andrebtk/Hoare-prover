@@ -41,23 +41,36 @@ ASTNode* create_node_assign(char* id, ASTNode* expr){
     return res;
 }
 
-ASTNode* create_node_If(ASTNode* condition, DLL* block) {
+ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else) {
     ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_IF;
+    res->type = NODE_IF_ELSE;
 
     res->If_While.condition = condition;
-    res->If_While.block = block;
+    res->If_While.block_main = block_if;
+	res->If_While.block_else = block_else;
     return res;
 }
 
 ASTNode* create_node_While(ASTNode* condition, DLL* block){
-     ASTNode* res = malloc(sizeof(ASTNode));
+    ASTNode* res = malloc(sizeof(ASTNode));
     res->type = NODE_WHILE;
 
     res->If_While.condition = condition;
-    res->If_While.block = block;
+    res->If_While.block_main = block;
     return res;
 }
+
+ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2) {
+	ASTNode* res = malloc(sizeof(ASTNode));
+	res->type = NODE_FUNCTION;
+
+	res->function.fname = strdup(name);
+	res->function.arg1 = a1;
+	res->function.arg2 = a2;
+	return res;
+
+}
+
 
 
 
@@ -75,6 +88,8 @@ line_linkedlist* create_ll(ASTNode* node) {
     list->node=node;
     return list;
 }
+
+
 
 void DLL_append(DLL* list, ASTNode* node) {
 	line_linkedlist* l = create_ll(node);
@@ -168,10 +183,10 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
             break;
         };
 
-        case NODE_IF: {
+        case NODE_IF_ELSE: {
 			print_line(iter);
 			print_prof(prof);
-            printf("Node IF:\n");
+            printf("Node IF ELSE:\n");
 			
 			print_prof(prof);
             printf("condition : \n");
@@ -179,13 +194,42 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			
 			printf("\n");
 			print_prof(prof);
-            printf("block : \n");
+            printf("block IF : \n");
 
             //print_prof(prof+1);
-			print_DLL(node->If_While.block, prof+1);
+			print_DLL(node->If_While.block_main, prof+1, -1);
+			printf("\n");
+
+			print_prof(prof);
+            printf("block Else : \n");
+
+            //print_prof(prof+1);
+			print_DLL(node->If_While.block_else, prof+1, -1);
 			printf("\n");
             break;
         };
+
+		case NODE_FUNCTION: {
+			print_line(iter);
+			print_prof(prof);
+            printf("Node Function:\n");
+
+			print_prof(prof);
+			printf("Function name: %s\n", node->function.fname);
+
+			print_prof(prof);
+			printf("Expr arg1: \n");
+			print_ASTNode(node->function.arg1, -1, prof+1);
+			printf("\n");
+
+			print_prof(prof);
+			printf("Expr arg2: \n");
+			print_ASTNode(node->function.arg2, -1, prof+1);
+			printf("\n");
+
+			break;
+		}
+
 
         case NODE_WHILE: {
 			print_prof(prof-1);
@@ -201,7 +245,7 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			printf("\n");
 			print_prof(prof);
             printf("block : \n");
-            print_DLL(node->If_While.block, prof+1);
+            print_DLL(node->If_While.block_main, prof+1, -1);
 			printf("\n");
             break;
         };
@@ -213,6 +257,8 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			printf("\n");
             break;
         };
+
+		
 
         
         default:
@@ -240,7 +286,7 @@ void print_line_linkedlist(line_linkedlist* list, int prof) {
 	}
 }
 
-void print_DLL(DLL* dll, int prof) {
+void print_DLL(DLL* dll, int prof, int pre) {
     if(dll == NULL) {
         printf("DLL is NULL\n");
         return;
@@ -251,11 +297,15 @@ void print_DLL(DLL* dll, int prof) {
     }
     print_line_linkedlist(dll->first, prof);
     
-    printf("PRECONDITON: \n");
-    print_ASTNode(dll->pre, 1, prof+1);
 
-    printf("POSTCONDITON: \n");
-    print_ASTNode(dll->post, 1, prof+1);
+	if(pre == 0) {
+		    printf("PRECONDITON: \n");
+		print_ASTNode(dll->pre, 1, prof+1);
+
+		printf("POSTCONDITON: \n");
+		print_ASTNode(dll->post, 1, prof+1);
+	}
+
    
 }
 
@@ -341,7 +391,7 @@ ASTNode* clone_node(const ASTNode* orig) {
 			break;
 		}
 
-		case NODE_IF: {
+		case NODE_IF_ELSE: {
 
 
 
@@ -397,7 +447,7 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 		}
 
 
-		case NODE_IF: {
+		case NODE_IF_ELSE: {
 
 			break;
 		}
@@ -506,6 +556,20 @@ int evaluate_expr (ASTNode* node) {
 			if (strcmp(node->binary_op.op, "/")==0)    return L / R;
 
 			break;
+		}
+
+		case NODE_FUNCTION: {
+			int arg1 = evaluate_expr(node->function.arg1);
+			int arg2 = evaluate_expr(node->function.arg2);
+
+			if( strcmp(node->function.fname,"min")==0 ){
+				return (arg1 < arg2) ? arg1 : arg2;
+			}
+
+			if( strcmp(node->function.fname,"max")==0 ){
+				return (arg1 < arg2) ? arg2 : arg1;
+			}
+
 		}
 	}
 	
