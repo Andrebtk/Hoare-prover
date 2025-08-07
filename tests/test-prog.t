@@ -1,13 +1,14 @@
-x = 1;
-y = 5;
-
-if (x>y) {
-    z = y;
+x = 3;
+y = 0;
+if (x > 0) {
+    if (x < 5) {
+        y = 10;
+    } else {
+        y = 20;
+    }
 } else {
-    z = x;
+    y = 30;
 }
 
-
-
-PRECONDITON: 0
-POSTCONDITON: min(x,y) == z
+PRECONDITION: true
+POSTCONDITION: y == 10

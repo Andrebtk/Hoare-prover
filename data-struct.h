@@ -7,7 +7,8 @@
 #define RESET   "\033[0m"
 
 
-typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, NODE_ID, NODE_BLOCK, NODE_FUNCTION, NODE_UNARY_OP} NodeType;
+typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, 
+					NODE_ID, NODE_BLOCK, NODE_FUNCTION, NODE_UNARY_OP, NODE_BOOL} NodeType;
 typedef enum { num, id, plus, minus, mul, div2 } TypeExpr;
 typedef enum { lt, gt, eq, neq } TypeCondition;
 
@@ -50,6 +51,7 @@ typedef struct ASTNode_ {
 
 		int number;
 		char* id_name;
+		int bool_value;
 	};
 	
 
@@ -94,7 +96,8 @@ ASTNode* create_node_assign(char* id, ASTNode* expr);
 ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else);
 ASTNode* create_node_While(ASTNode* condition, DLL* block);
 ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2);
-
+ASTNode* create_node_bool(int value);
+ 
 DLL* create_DLL();
 line_linkedlist* create_ll(ASTNode* node);
 void DLL_append(DLL* list, ASTNode* node);
@@ -112,8 +115,11 @@ void insert_HashMap(HashMap* h, const char* name, ASTNode* node);
 ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
 ASTNode* clone_node(const ASTNode* orig);
 
-void hoare_prover(DLL* code, ASTNode* pre, ASTNode* post);
-void hoare_AssignmentRule(DLL* code);
+
+ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post);
+ASTNode* hoare_statement(ASTNode* node, ASTNode* post);
+ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post /*DLL* code*/);
+ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post);
 
 
 int evaluate_formula(ASTNode* node);

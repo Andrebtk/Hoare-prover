@@ -2,7 +2,7 @@
 	#include <stdio.h>
 	#include "data-struct.h"
 	#include "parser/parser.tab.h"
-	
+
 %}
 
 
@@ -60,6 +60,12 @@
 \n 						;
 
 
+"true"    return TRUE;
+"false"   return FALSE;
+
+"TRUE"    return TRUE;
+"FALSE"   return FALSE;
+
 ";" { 
 	return SEMICOLON;
 }
@@ -100,13 +106,14 @@
 	return GT;
 }
 
-"PRECONDITON:" {
+"PRECONDITION:" {
 	return PRECOND;
 }
 
-"POSTCONDITON:" {
+"POSTCONDITION:" {
 	return POSTCOND;
 }
+
 
 "AND" {
 	return AND;
