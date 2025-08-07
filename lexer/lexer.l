@@ -21,9 +21,15 @@
 	return MAX;
 }
 
+"->" {
+	return IMPLY;
+}
+
 "==" { 
 	return EQ;
 }
+
+
 
 "=" { 
 	return ASSIGN;
@@ -117,6 +123,15 @@
 "or" {
 	return OR;
 }
+
+"NOT" {
+	return NOT;
+}
+
+"not" {
+	return NOT;
+}
+
 
 
 

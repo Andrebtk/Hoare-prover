@@ -16,6 +16,17 @@ ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right) {
     return res;
 }
 
+ASTNode* create_node_unary(char* type, ASTNode* child) {
+	ASTNode* res = malloc(sizeof(ASTNode));
+	res->type = NODE_UNARY_OP;
+
+	res->unary_op.op = strdup(type);
+	res->unary_op.child = child;
+
+	return res;
+}
+
+
 ASTNode* create_node_number(int num) {
     ASTNode* res = malloc(sizeof(ASTNode));
     res->type = NODE_NUMBER;
@@ -73,7 +84,6 @@ ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2) {
 
 
 
-
 DLL* create_DLL() {
     DLL* res = malloc(sizeof(DLL));
     res->first = NULL;
@@ -119,7 +129,6 @@ void print_prof(int prof) {
 		printf("\t");
 	}
 }
-
 
 
 void print_ASTNode(ASTNode* node, int iter, int prof) {
@@ -321,7 +330,6 @@ HashMap* create_HashMap(int size) {
     
     return res;
 } 
-
 unsigned long hash_djb2(const char* str) {
     unsigned long hash = 5381;
     int c;
@@ -331,12 +339,9 @@ unsigned long hash_djb2(const char* str) {
 
     return hash;
 }
-
-
 int hash(HashMap* h,const char* str) {
     return (int) (hash_djb2(str) % h->size);
 }
-
 HashEntry* create_HashEntry(const char* key, ASTNode* node) {
     HashEntry* res = malloc(sizeof(HashEntry));
     res->key = strdup(key);
@@ -344,8 +349,6 @@ HashEntry* create_HashEntry(const char* key, ASTNode* node) {
     res->next = NULL;
     return res;
 }
-
-
 void insert_HashMap(HashMap* h, const char* name, ASTNode* node) {
     int index = hash(h, name);
     HashEntry* n = create_HashEntry(name, node);
@@ -388,6 +391,14 @@ ASTNode* clone_node(const ASTNode* orig) {
 			ASTNode* right = clone_node(orig->binary_op.right);
 
 			return create_node_binary(orig->binary_op.op, left, right);
+			break;
+		}
+
+		case NODE_UNARY_OP: { 
+			return create_node_unary(
+				strdup(orig->unary_op.op),
+				clone_node(orig->unary_op.child)
+			);
 			break;
 		}
 
@@ -483,7 +494,26 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 
 
 
-void hoare_prover(DLL* code) {
+void hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
+
+}
+
+
+/*
+   {P} if B then { C1 } else { C2 } {Q}
+*/
+void hoarce_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
+
+	ASTNode* condition = node_IfElse->If_While.condition;	// B
+	DLL* block_if = node_IfElse->If_While.block_main;		// C1
+	DLL* block_else = node_IfElse->If_While.block_else;		// C2
+
+
+
+}
+
+
+void hoare_AssignmentRule(DLL* code) {
 	line_linkedlist *current = code->last;
 	ASTNode* hoare_interline = code->post;
 
@@ -514,7 +544,6 @@ int evaluate_formula(ASTNode* node) {
 	switch (node->type) {
 		case NODE_BIN_OP : {
 
-
 			if( strcmp(node->binary_op.op, "AND")==0 || strcmp(node->binary_op.op, "and")==0 ) 
 				return evaluate_formula(node->binary_op.left) 
 						&& evaluate_formula(node->binary_op.right);
@@ -523,6 +552,13 @@ int evaluate_formula(ASTNode* node) {
 				return evaluate_formula(node->binary_op.left) 
 						|| evaluate_formula(node->binary_op.right);
 			
+			if( strcmp(node->binary_op.op, "->")==0 ) {
+				int L = evaluate_formula(node->binary_op.left);
+				int R = evaluate_formula(node->binary_op.right);
+				return !L || R;
+			}
+				
+
 			int L = evaluate_expr(node->binary_op.left);
 			int R = evaluate_expr(node->binary_op.right);
 
@@ -533,6 +569,14 @@ int evaluate_formula(ASTNode* node) {
 
 
 			break;
+		}
+
+		case NODE_UNARY_OP: {
+			if( strcmp(node->unary_op.op,"NOT")==0 || strcmp(node->unary_op.op,"not")==0 ){
+				int child = evaluate_formula(node->unary_op.child);
+				return !child;
+
+			}
 		}
 	}
 }

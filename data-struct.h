@@ -7,7 +7,7 @@
 #define RESET   "\033[0m"
 
 
-typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, NODE_ID, NODE_BLOCK, NODE_FUNCTION} NodeType;
+typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, NODE_ID, NODE_BLOCK, NODE_FUNCTION, NODE_UNARY_OP} NodeType;
 typedef enum { num, id, plus, minus, mul, div2 } TypeExpr;
 typedef enum { lt, gt, eq, neq } TypeCondition;
 
@@ -42,6 +42,11 @@ typedef struct ASTNode_ {
 			struct ASTNode_* left;
 			struct ASTNode_* right;
 		} binary_op;
+
+		struct {
+			char *op;
+			struct ASTNode_*child;
+		} unary_op;
 
 		int number;
 		char* id_name;
@@ -82,6 +87,7 @@ typedef struct HashMap_ {
 
 
 ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right);
+ASTNode* create_node_unary(char* type, ASTNode* child);
 ASTNode* create_node_number(int num);
 ASTNode* create_node_id(char *input);
 ASTNode* create_node_assign(char* id, ASTNode* expr);
@@ -105,7 +111,11 @@ void insert_HashMap(HashMap* h, const char* name, ASTNode* node);
 
 ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
 ASTNode* clone_node(const ASTNode* orig);
-void hoare_prover(DLL* code);
+
+void hoare_prover(DLL* code, ASTNode* pre, ASTNode* post);
+void hoare_AssignmentRule(DLL* code);
+
+
 int evaluate_formula(ASTNode* node);
 int evaluate_expr (ASTNode* node);
 

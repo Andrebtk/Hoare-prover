@@ -27,6 +27,7 @@
 
 %token MIN MAX
 %token COMMA
+%token IMPLY
 
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
@@ -37,7 +38,7 @@
 %token ASSIGN    // '='
 %token EQ        // '=='
 %token NEQ       // '!='
-
+%token NOT
 
 %left PLUS MINUS
 %left MUL DIV
@@ -110,6 +111,8 @@ condition:
 	| expr GT expr			{ $$ = create_node_binary(">", $1, $3); }
 	| expr EQ expr			{ $$ = create_node_binary("==", $1, $3); }
 	| expr NEQ expr			{ $$ = create_node_binary("!=", $1, $3); }
+	| NOT expr 				{ $$ = create_node_unary("not", $2); }
+	| expr IMPLY expr 		{ $$ = create_node_binary("->", $1, $3); }
 	;
 
 expr:
@@ -123,6 +126,7 @@ expr:
 	| expr MINUS expr		{ $$ = create_node_binary("-", $1, $3); }
 	| expr MUL expr			{ $$ = create_node_binary("*", $1, $3); }
 	| expr DIV expr			{ $$ = create_node_binary("/", $1, $3); }
+	| NOT expr 				{ $$ = create_node_unary("not", $2); }
 	| MIN LPAREN expr COMMA expr RPAREN 				{
 		$$ = create_node_Func("min",$3, $5);
 	}
@@ -156,7 +160,7 @@ int main() {
     }
 
 	printf("Starting verify:\n");
-	//hoare_prover(root);
+	hoare_prover(root, root->pre, root->post);
     return 0;
 
 }
