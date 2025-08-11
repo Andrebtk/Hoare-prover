@@ -22,14 +22,14 @@
 }
 
 
-%token IF ELSE WHILE 
+%token IF ELSE WHILE INVARIANT
 %token SEMICOLON LPAREN RPAREN LBRACE RBRACE COLON
 %token PLUS MINUS MUL DIV LT GT AND OR
 %token PRECOND POSTCOND 
 
 %token TRUE FALSE
 
-%token MIN MAX
+%token MIN MAX FACT
 %token COMMA
 %token IMPLY
 
@@ -83,20 +83,20 @@ postcond:
 
 statement:
 
- 	IDENTIFIER ASSIGN expr SEMICOLON					{ 
+ 	IDENTIFIER ASSIGN expr SEMICOLON											{ 
 		$$ = create_node_assign($1, $3);
 	}
 
-	| IF LPAREN condition RPAREN block ELSE block		{ 
+	| IF LPAREN condition RPAREN block ELSE block								{ 
 		$$ = create_node_If_Else($3, $5, $7);
 	}
 
-	| IF LPAREN condition RPAREN block {
+	| IF LPAREN condition RPAREN block 											{
 		$$ = create_node_If_Else($3, $5, NULL); // Handle if without else
 	}
 
-	| WHILE LPAREN condition RPAREN block 				{ 
-		$$ = create_node_While($3, $5);
+	| WHILE LPAREN condition RPAREN INVARIANT LPAREN condition RPAREN block 	{ 
+		$$ = create_node_While($3, $9, $7);
 	}
 
 	
@@ -145,6 +145,9 @@ expr:
     | MAX LPAREN expr COMMA expr RPAREN {
         $$ = create_node_Func("max", $3, $5);
     }
+	| FACT LPAREN expr RPAREN {
+		$$ = create_node_Func("fact", $3, NULL);
+	}
     ;
 
 %%

@@ -2,8 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #include "data-struct.h"
 
+
+
+int fact(int n) {
+
+	if (n<0)
+		return -1;
+
+	if( (n==0) || (n==1) )
+		return 1;
+
+	return n * fact(n-1);
+	
+}
 
 
 ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right) {
@@ -56,18 +70,19 @@ ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else)
     ASTNode* res = malloc(sizeof(ASTNode));
     res->type = NODE_IF_ELSE;
 
-    res->If_While.condition = condition;
-    res->If_While.block_main = block_if;
-	res->If_While.block_else = block_else;
+    res->If.condition = condition;
+    res->If.block_if = block_if;
+	res->If.block_else = block_else;
     return res;
 }
 
-ASTNode* create_node_While(ASTNode* condition, DLL* block){
+ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant) {
     ASTNode* res = malloc(sizeof(ASTNode));
     res->type = NODE_WHILE;
 
-    res->If_While.condition = condition;
-    res->If_While.block_main = block;
+    res->While.condition = condition;
+    res->While.block_main = block;
+	res->While.invariant = invariant;
     return res;
 }
 
@@ -217,21 +232,21 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			
 			print_prof(prof);
             printf("condition : \n");
-            print_ASTNode(node->If_While.condition, -1, prof+1);
+            print_ASTNode(node->If.condition, -1, prof+1);
 			
 			printf("\n");
 			print_prof(prof);
             printf("block IF : \n");
 
             //print_prof(prof+1);
-			print_DLL(node->If_While.block_main, prof+1, -1);
+			print_DLL(node->If.block_if, prof+1, -1);
 			printf("\n");
 
 			print_prof(prof);
             printf("block Else : \n");
 
             //print_prof(prof+1);
-			print_DLL(node->If_While.block_else, prof+1, -1);
+			print_DLL(node->If.block_else, prof+1, -1);
 			printf("\n");
             break;
         };
@@ -256,6 +271,7 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			if (node->function.arg2)
 				print_ASTNode(node->function.arg2, -1, prof+1);
 			else
+				print_prof(prof+1);
 				printf("NULL\n");
 
 			break;
@@ -264,6 +280,7 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 
 
         case NODE_WHILE: {
+			
 			print_prof(prof-1);
 			print_line(iter);
 			print_prof(prof);
@@ -271,25 +288,33 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			
 			print_prof(prof);
             printf("condition : \n");
-            print_ASTNode(node->If_While.condition, -1, prof+1);
+            print_ASTNode(node->While.condition, -1, prof+1);
+
+			print_prof(prof);
+            printf("Invariant : \n");
+            print_ASTNode(node->While.invariant, -1, prof+1);
 
 
 			printf("\n");
 			print_prof(prof);
             printf("block : \n");
-            print_DLL(node->If_While.block_main, prof+1, -1);
+            print_DLL(node->While.block_main, prof+1, -1);
 			printf("\n");
             break;
+			
         };
 
-        case NODE_BLOCK: {
+		case NODE_BOOL: {
 			print_prof(prof);
 			print_line(iter);
-            printf("Node block");
-			printf("\n");
-            break;
-        };
+			printf("Node Bool: \n");
+			print_prof(prof);
+			if(node->bool_value == 0) 	{ printf("False \n"); }
+			else 						{ printf("True \n"); }
 
+			printf("\n");
+			break;
+		}
 		
 
         
@@ -451,16 +476,16 @@ ASTNode* clone_node(const ASTNode* orig) {
 		case NODE_IF_ELSE: {
 			// Clone the “then” block
 			DLL* then_copy = create_DLL();
-			for (line_linkedlist* it = orig->If_While.block_main->first; it; it = it->next) {
+			for (line_linkedlist* it = orig->If.block_if->first; it; it = it->next) {
 				DLL_append(then_copy, clone_node(it->node));
 			}
 			// Clone the “else” block
 			DLL* else_copy = create_DLL();
-			for (line_linkedlist* it = orig->If_While.block_else->first; it; it = it->next) {
+			for (line_linkedlist* it = orig->If.block_else->first; it; it = it->next) {
 				DLL_append(else_copy, clone_node(it->node));
 			}
 			return create_node_If_Else(
-				clone_node(orig->If_While.condition),
+				clone_node(orig->If.condition),
 				then_copy,
 				else_copy
 			);
@@ -469,29 +494,17 @@ ASTNode* clone_node(const ASTNode* orig) {
 		}
 
 		case NODE_WHILE: {
+			
 			DLL* body_copy = create_DLL();
-			for (line_linkedlist* it = orig->If_While.block_main->first; it; it = it->next) {
+			for (line_linkedlist* it = orig->While.block_main->first; it; it = it->next) {
 				DLL_append(body_copy, clone_node(it->node));
 			}
 			return create_node_While(
-				clone_node(orig->If_While.condition),
-				body_copy
+				clone_node(orig->While.condition),
+				body_copy,
+				clone_node(orig->While.invariant)
 			);
-
-			break;
-		}
-
-		case NODE_BLOCK: {
-
-			DLL* blk = create_DLL();
-			for (line_linkedlist* it = orig->If_While.block_main->first; it; it = it->next) {
-				DLL_append(blk, clone_node(it->node));
-			}
-			ASTNode* node = malloc(sizeof(ASTNode));
-			node->type = NODE_BLOCK;
-			node->If_While.block_main = blk;
-			return node;
-
+			
 			break;
 		}
 	}
@@ -544,11 +557,6 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 				return create_node_id(formula->id_name);
 			}
 			break;
-		}
-
-		case NODE_BLOCK: {
-
-
 		}
 
 		case NODE_FUNCTION: {
@@ -606,6 +614,11 @@ ASTNode* hoare_statement(ASTNode* node, ASTNode* post) {
 			break;
 		}
 
+		case NODE_WHILE: {
+			return hoare_WhileRule(node, post);
+			break;
+		}
+
 		default:
 			fprintf(stderr, "hoare_statement: unsupported node type %d\n", node->type);
 			return NULL;
@@ -614,10 +627,15 @@ ASTNode* hoare_statement(ASTNode* node, ASTNode* post) {
 
 }
 
+ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post /*DLL* code*/) {
+	return substitute(post, 
+						node->Assign.id, 
+						node->Assign.expr);
+}
 
 
 /*
-   {P} if B then { C1 } else { C2 } {Q}
+	{P} if B then { C1 } else { C2 } {Q}
 */
 ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 
@@ -627,9 +645,9 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 	}
 
 	
-	ASTNode* condition = node_IfElse->If_While.condition;	// B
-	DLL* block_if = node_IfElse->If_While.block_main;		// C1
-	DLL* block_else = node_IfElse->If_While.block_else;		// C2
+	ASTNode* condition = node_IfElse->If.condition;	// B
+	DLL* block_if = node_IfElse->If.block_if;		// C1
+	DLL* block_else = node_IfElse->If.block_else;		// C2
 
 	if (!condition || !block_if || !block_else) {
 		fprintf(stderr, RED "Incomplete IF node\n" RESET);
@@ -648,11 +666,28 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 }
 
 
-ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post /*DLL* code*/) {
-	return substitute(post, 
-						node->Assign.id, 
-						node->Assign.expr);
+/*
+	{I} while B do C {I ∧ ¬B}
+*/
+ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
+	ASTNode* condition = node->While.condition; // B
+	ASTNode* invariant = node->While.invariant; // I
+	DLL* block_code = node->While.block_main;   // C
+
+
+	ASTNode* notB = create_node_unary("not", clone_node(condition));
+	ASTNode* I_and_notB  = create_node_binary("and", clone_node(invariant), notB);
+	ASTNode* I_and_B = create_node_binary("and", clone_node(invariant), clone_node(condition));
+
+	ASTNode* wp_body = hoare_prover(block_code, NULL, clone_node(invariant));
+	
+	
+	ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
+	ASTNode* left = create_node_binary("->", I_and_B, wp_body);
+
+	return create_node_binary("and", left, right);
 }
+
 
 
 // 2) Logical & comparison evaluator
@@ -731,8 +766,15 @@ int evaluate_expr (ASTNode* node) {
 		}
 
 		case NODE_FUNCTION: {
+			
 			int arg1 = evaluate_expr(node->function.arg1);
-			int arg2 = evaluate_expr(node->function.arg2);
+
+			int arg2 = -1;
+			if(node->function.arg2 != NULL) {
+				arg2 = evaluate_expr(node->function.arg2);
+			}
+			
+
 
 			if( strcmp(node->function.fname,"min")==0 ){
 				return (arg1 < arg2) ? arg1 : arg2;
@@ -740,6 +782,10 @@ int evaluate_expr (ASTNode* node) {
 
 			if( strcmp(node->function.fname,"max")==0 ){
 				return (arg1 < arg2) ? arg2 : arg1;
+			}
+
+			if ( strcmp(node->function.fname, "fact")==0 ) {
+				return fact(arg1);
 			}
 
 		}

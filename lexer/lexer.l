@@ -21,6 +21,11 @@
 	return MAX;
 }
 
+
+"fact" {
+	return FACT;
+}
+
 "->" {
 	return IMPLY;
 }
@@ -29,6 +34,9 @@
 	return EQ;
 }
 
+"invariant" {
+	return INVARIANT;
+}
 
 
 "=" { 
