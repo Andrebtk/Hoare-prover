@@ -40,6 +40,7 @@ typedef struct ASTNode_ {
 		struct {
 			struct ASTNode_* condition;
 			struct ASTNode_* invariant;
+			struct ASTNode_* variant;
 			DLL* block_main;
 		} While;
 
@@ -100,7 +101,7 @@ ASTNode* create_node_number(int num);
 ASTNode* create_node_id(char *input);
 ASTNode* create_node_assign(char* id, ASTNode* expr);
 ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else);
-ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant);
+ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant, ASTNode* variant);
 ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2);
 ASTNode* create_node_bool(int value);
  

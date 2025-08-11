@@ -22,7 +22,7 @@
 }
 
 
-%token IF ELSE WHILE INVARIANT
+%token IF ELSE WHILE INVARIANT VARIANT
 %token SEMICOLON LPAREN RPAREN LBRACE RBRACE COLON
 %token PLUS MINUS MUL DIV LT GT AND OR
 %token PRECOND POSTCOND 
@@ -95,8 +95,8 @@ statement:
 		$$ = create_node_If_Else($3, $5, NULL); // Handle if without else
 	}
 
-	| WHILE LPAREN condition RPAREN INVARIANT LPAREN condition RPAREN block 	{ 
-		$$ = create_node_While($3, $9, $7);
+	| WHILE LPAREN condition RPAREN INVARIANT LPAREN condition RPAREN VARIANT LPAREN expr RPAREN block 	{ 
+		$$ = create_node_While($3, $13, $7, $11);
 	}
 
 	
@@ -176,8 +176,9 @@ int main() {
 	printf("Starting verify:\n");
 	
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
-	
-	
+	//print_ASTNode(result, -1, 0);
+
+
 	printf("\nResult: ");
 	if (evaluate_formula(result) == 0)	{ printf(RED "The program is not valid\n" RESET); }
 	else 								{ printf(GREEN "The program is valid\n" RESET); }

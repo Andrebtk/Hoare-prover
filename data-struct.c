@@ -76,14 +76,15 @@ ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else)
     return res;
 }
 
-ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant) {
+ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant, ASTNode* variant) {
     ASTNode* res = malloc(sizeof(ASTNode));
     res->type = NODE_WHILE;
 
     res->While.condition = condition;
     res->While.block_main = block;
 	res->While.invariant = invariant;
-    return res;
+	res->While.variant = variant;
+	return res;
 }
 
 ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2) {
@@ -294,6 +295,10 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
             printf("Invariant : \n");
             print_ASTNode(node->While.invariant, -1, prof+1);
 
+			print_prof(prof);
+            printf("Variant : \n");
+            print_ASTNode(node->While.variant, -1, prof+1);
+
 
 			printf("\n");
 			print_prof(prof);
@@ -316,6 +321,16 @@ void print_ASTNode(ASTNode* node, int iter, int prof) {
 			break;
 		}
 		
+
+		case NODE_UNARY_OP: {
+			print_prof(prof);
+			print_line(iter);
+			printf("Node Unary: %s \n", node->unary_op.op);
+
+			print_prof(prof);
+			printf("Child : \n");
+			print_ASTNode(node->unary_op.child, -1, prof+1);
+		}
 
         
         default:
@@ -502,7 +517,8 @@ ASTNode* clone_node(const ASTNode* orig) {
 			return create_node_While(
 				clone_node(orig->While.condition),
 				body_copy,
-				clone_node(orig->While.invariant)
+				clone_node(orig->While.invariant),
+				clone_node(orig->While.variant)
 			);
 			
 			break;
@@ -539,7 +555,20 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 		}
 
 		case NODE_WHILE: {
-			return NULL;
+			ASTNode* new_condition = substitute(formula->While.condition, var, replacement);
+			ASTNode* new_invariant = substitute(formula->While.invariant, var, replacement);
+			ASTNode* new_variant = substitute(formula->While.variant, var, replacement);
+			
+			// Substitute in the DLL block_main: create a new DLL with substituted statements
+			DLL* new_block = create_DLL();
+			line_linkedlist* cur = formula->While.block_main->first;
+			while (cur != NULL) {
+				ASTNode* new_node = substitute(cur->node, var, replacement);
+				DLL_append(new_block, new_node);
+				cur = cur->next;
+			}
+			
+			return create_node_While(new_condition, new_block, new_invariant, new_variant);
 			break;
 		}
 
@@ -576,7 +605,6 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 
 	}
 }
-
 
 
 ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
@@ -672,6 +700,7 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
 	ASTNode* condition = node->While.condition; // B
 	ASTNode* invariant = node->While.invariant; // I
+	ASTNode* variant = node->While.variant;
 	DLL* block_code = node->While.block_main;   // C
 
 
@@ -679,18 +708,43 @@ ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
 	ASTNode* I_and_notB  = create_node_binary("and", clone_node(invariant), notB);
 	ASTNode* I_and_B = create_node_binary("and", clone_node(invariant), clone_node(condition));
 
-	ASTNode* wp_body = hoare_prover(block_code, NULL, clone_node(invariant));
+	ASTNode* wp_body = hoare_prover(block_code, I_and_B, clone_node(invariant));
 	
 	
 	ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
 	ASTNode* left = create_node_binary("->", I_and_B, wp_body);
 
-	return create_node_binary("and", left, right);
+	// partial correctness: ((I ∧ B) -> wp_body) ∧ ((I ∧ ¬B) -> post)
+	ASTNode* partial_correctness = create_node_binary("and", left, right);
+
+
+	// === total correctness additional checks ===
+	ASTNode* variant_after = clone_node(variant);
+	line_linkedlist* cur = block_code->first;
+	while (cur != NULL) {
+		if (cur->node->type == NODE_ASSIGN) {
+			variant_after = substitute(variant_after, cur->node->Assign.id, cur->node->Assign.expr);
+		}
+		cur = cur->next;
+	}
+
+	//create: v' < V
+	ASTNode* variant_decreases = create_node_binary("<", variant_after, clone_node(variant));
+
+	//Create: v >= 0
+	ASTNode* node_zero = create_node_number(0);
+	ASTNode* variant_nonnegative = create_node_binary(">=", clone_node(variant), node_zero);
+
+	// total correctness: (I ∧ B) -> (variant_after < variant ∧ 0 <= variant)
+	ASTNode* decrease_condition = create_node_binary("and", variant_decreases, variant_nonnegative);
+	ASTNode* termination_condition = create_node_binary("->", I_and_B, decrease_condition);
+	
+	return create_node_binary("and", partial_correctness, termination_condition);
 }
 
 
 
-// 2) Logical & comparison evaluator
+// 1) Logical & comparison evaluator
 int evaluate_formula(ASTNode* node) {
 
 	if (!node) return 0;
@@ -720,6 +774,8 @@ int evaluate_formula(ASTNode* node) {
 			if( strcmp(node->binary_op.op, "!=")==0 ) return L != R;
 			if( strcmp(node->binary_op.op, "<")==0 ) return L < R;
 			if( strcmp(node->binary_op.op, ">")==0 ) return L > R;
+			if( strcmp(node->binary_op.op, ">=")==0 ) return L >= R;
+			if( strcmp(node->binary_op.op, "<=")==0 ) return L <= R;
 
 
 			break;
@@ -745,7 +801,7 @@ int evaluate_formula(ASTNode* node) {
 }
 
 
-// 1) Arithmetic evaluator
+// 2) Arithmetic evaluator
 int evaluate_expr (ASTNode* node) {
 
 	switch (node->type) {

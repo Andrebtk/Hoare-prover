@@ -38,6 +38,10 @@
 	return INVARIANT;
 }
 
+"variant" {
+	return VARIANT;
+}
+
 
 "=" { 
 	return ASSIGN;
