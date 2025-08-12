@@ -14,7 +14,7 @@ all: $(TARGET)
 
 # Compilation finale
 $(TARGET): $(SOURCES)
-	gcc -Wall -Wextra \
+	gcc \
 	    -I. -IAst -IHashmap -IHoare -IZ3 -IParser -ILexer \
 	    -o $(TARGET) $(SOURCES) -lz3 -lfl
 
