@@ -2,6 +2,7 @@
     "files.associations": {
         "*.y": "c",
         "*.t": "c",
-        "limits": "c"
+        "limits": "c",
+        "data-struct.h": "c"
     }
 }

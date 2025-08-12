@@ -3,6 +3,7 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include "data-struct.h"
+	#include "data-struct.h"
 
 	DLL* root = NULL;
 
@@ -25,6 +26,7 @@
 %token IF ELSE WHILE INVARIANT VARIANT
 %token SEMICOLON LPAREN RPAREN LBRACE RBRACE COLON
 %token PLUS MINUS MUL DIV LT GT AND OR
+%token GE LE
 %token PRECOND POSTCOND 
 
 %token TRUE FALSE
@@ -120,6 +122,8 @@ block:
 condition:
       expr LT expr          { $$ = create_node_binary("<", $1, $3); }
     | expr GT expr          { $$ = create_node_binary(">", $1, $3); }
+	| expr GE expr          { $$ = create_node_binary(">=", $1, $3); }
+	| expr LE expr          { $$ = create_node_binary("<=", $1, $3); }
     | expr EQ expr          { $$ = create_node_binary("==", $1, $3); }
     | expr NEQ expr         { $$ = create_node_binary("!=", $1, $3); }
 	| TRUE                  { $$ = create_node_bool(1); }
@@ -157,6 +161,20 @@ void yyerror(const char *s) {
 	fprintf(stderr, "Parse error: %s\n", s);
 }
 
+Z3_func_decl fact_func;
+
+
+void init_z3_functions(Z3_context ctx) {
+    Z3_sort int_sort = Z3_mk_int_sort(ctx);
+
+    Z3_symbol fact_sym = Z3_mk_string_symbol(ctx, "fact");
+
+    // La fonction fact prend 1 argument de type int, retourne int
+    Z3_sort domain[] = { int_sort };
+
+    fact_func = Z3_mk_func_decl(ctx, fact_sym, 1, domain, int_sort);
+}
+
 int main() {
 
 	printf("Start parsing...\n");
@@ -176,12 +194,69 @@ int main() {
 	printf("Starting verify:\n");
 	
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
+	ASTNode* vc = create_node_binary("->", root->pre, result);
 	//print_ASTNode(result, -1, 0);
 
-
+	/*
 	printf("\nResult: ");
 	if (evaluate_formula(result) == 0)	{ printf(RED "The program is not valid\n" RESET); }
 	else 								{ printf(GREEN "The program is valid\n" RESET); }
+	*/
+
+	// --------- Here comes Z3 verification ---------
+	// Create context and solver
+	
+	Z3_config cfg = Z3_mk_config();
+	Z3_set_param_value(cfg, "trace", "true");
+	Z3_set_param_value(cfg, "stats", "true");
+	//Z3_set_param_value(cfg, "trace_file_name", "z3_trace.log");
+	Z3_context ctx = Z3_mk_context(cfg);
+	Z3_del_config(cfg);
+
+	
+	init_z3_functions(ctx);
+	init_z3(ctx);
+	
+
+	Z3_solver solver = Z3_mk_solver(ctx);
+	Z3_solver_inc_ref(ctx, solver);
+
+	// Create var_cache hashmap for variable caching
+	HashMap* var_cache = create_HashMap(64);
+	//print_ASTNode(vc,-1,-1);
+	
+	
+	// Convert VC AST (result) to Z3_ast
+	Z3_ast res = ast_to_z3(ctx, vc, var_cache);
+
+	
+	// Assert negation of VC to check validity
+	
+	Z3_ast not_vc = Z3_mk_not(ctx, res);
+
+	
+	Z3_solver_assert(ctx, solver, not_vc);
+
+
+	// Check satisfiability
+	Z3_lbool z3_result = Z3_solver_check(ctx, solver);
+	if (z3_result == Z3_L_FALSE) {
+		printf(GREEN "Z3 says: The program is correct!\n" RESET);
+	} else if (z3_result == Z3_L_TRUE) {
+		printf(RED "Z3 says: The program is NOT correct!\n" RESET);
+		Z3_model model = Z3_solver_get_model(ctx, solver);
+		Z3_model_inc_ref(ctx, model);
+		// You can inspect the model here for counterexamples
+		// e.g. print variable values
+		Z3_model_dec_ref(ctx, model);
+	} else {
+		printf("Z3 says: Unknown result.\n");
+	}
+
+	// Cleanup
+	Z3_solver_dec_ref(ctx, solver);
+	Z3_del_context(ctx);
+	
 	
 	return 0;
 

@@ -118,6 +118,14 @@
 	return GT;
 }
 
+"<=" {
+	return LE;
+}
+
+">=" {
+	return GE;
+}
+
 "PRECONDITION:" {
 	return PRECOND;
 }

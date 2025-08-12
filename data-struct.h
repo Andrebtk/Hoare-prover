@@ -2,10 +2,11 @@
 #define DATA_STRUCT_H
 
 #include <stdio.h>
+#include <z3.h>
 #define RED     "\033[31m"      /* Red */
 #define GREEN   "\033[32m"      /* Green */
 #define RESET   "\033[0m"
-
+extern Z3_func_decl fact_func;
 
 typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, 
 					NODE_ID, NODE_FUNCTION, NODE_UNARY_OP, NODE_BOOL} NodeType;
@@ -82,7 +83,7 @@ typedef struct DLL_ {
 // HashMap
 typedef struct HashEntry_ {
 	char *key;
-	ASTNode* value;
+	Z3_ast value;
 	struct HashEntry_* next;
 } HashEntry;
 
@@ -116,7 +117,8 @@ void print_DLL(DLL* dll, int prof, int pre);
 
 HashMap* create_HashMap(int size);
 int hash(HashMap* h,const char* str);
-void insert_HashMap(HashMap* h, const char* name, ASTNode* node);
+HashEntry* create_HashEntry(const char* key, Z3_ast node);
+void insert_HashMap(HashMap* h, const char* name, Z3_ast node);
 
 
 ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
@@ -131,6 +133,9 @@ ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post);
 
 int evaluate_formula(ASTNode* node);
 int evaluate_expr (ASTNode* node);
+
+void init_z3(Z3_context ctx);
+Z3_ast ast_to_z3(Z3_context ctx, ASTNode* node, HashMap* var_cache);
 
 
 #endif
