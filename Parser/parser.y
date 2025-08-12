@@ -2,8 +2,12 @@
 	/* C declarations: includes, helper functions, variables */
 	#include <stdio.h>
 	#include <stdlib.h>
-	#include "data-struct.h"
-	#include "data-struct.h"
+
+	#include "../Ast/ast.h"
+	#include "../Hoare/hoare.h"
+	#include "../Z3/z3_helpers.h"
+	#include "../Hashmap/hashmap.h"
+
 
 	DLL* root = NULL;
 
@@ -207,9 +211,6 @@ int main() {
 	// Create context and solver
 	
 	Z3_config cfg = Z3_mk_config();
-	Z3_set_param_value(cfg, "trace", "true");
-	Z3_set_param_value(cfg, "stats", "true");
-	//Z3_set_param_value(cfg, "trace_file_name", "z3_trace.log");
 	Z3_context ctx = Z3_mk_context(cfg);
 	Z3_del_config(cfg);
 

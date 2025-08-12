@@ -1,8 +1,6 @@
 {
     "files.associations": {
-        "*.y": "c",
-        "*.t": "c",
-        "limits": "c",
-        "data-struct.h": "c"
+        "ast.h": "c",
+        "stdlib.h": "c"
     }
 }

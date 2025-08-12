@@ -1,17 +1,12 @@
-#ifndef DATA_STRUCT_H
-#define DATA_STRUCT_H
+#ifndef AST_H
+#define AST_H
 
-#include <stdio.h>
 #include <z3.h>
-#define RED     "\033[31m"      /* Red */
-#define GREEN   "\033[32m"      /* Green */
-#define RESET   "\033[0m"
-extern Z3_func_decl fact_func;
+
 
 typedef enum { NODE_ASSIGN, NODE_BIN_OP, NODE_IF_ELSE, NODE_WHILE, NODE_NUMBER, 
 					NODE_ID, NODE_FUNCTION, NODE_UNARY_OP, NODE_BOOL} NodeType;
-typedef enum { num, id, plus, minus, mul, div2 } TypeExpr;
-typedef enum { lt, gt, eq, neq } TypeCondition;
+
 
 struct DLL_;
 typedef struct DLL_ DLL;
@@ -79,23 +74,6 @@ typedef struct DLL_ {
 } DLL;
 
 
-
-// HashMap
-typedef struct HashEntry_ {
-	char *key;
-	Z3_ast value;
-	struct HashEntry_* next;
-} HashEntry;
-
-typedef struct HashMap_ {
-	int size;
-	HashEntry** table;
-} HashMap;
-
-
-
-
-
 ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right);
 ASTNode* create_node_unary(char* type, ASTNode* child);
 ASTNode* create_node_number(int num);
@@ -105,7 +83,7 @@ ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else)
 ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant, ASTNode* variant);
 ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2);
 ASTNode* create_node_bool(int value);
- 
+
 DLL* create_DLL();
 line_linkedlist* create_ll(ASTNode* node);
 void DLL_append(DLL* list, ASTNode* node);
@@ -114,28 +92,7 @@ void print_ASTNode(ASTNode* node, int iter, int prof);
 void print_line_linkedlist(line_linkedlist* list, int prof);
 void print_DLL(DLL* dll, int prof, int pre);
 
-
-HashMap* create_HashMap(int size);
-int hash(HashMap* h,const char* str);
-HashEntry* create_HashEntry(const char* key, Z3_ast node);
-void insert_HashMap(HashMap* h, const char* name, Z3_ast node);
-
-
 ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
 ASTNode* clone_node(const ASTNode* orig);
-
-
-ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post);
-ASTNode* hoare_statement(ASTNode* node, ASTNode* post);
-ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post /*DLL* code*/);
-ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post);
-ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post);
-
-int evaluate_formula(ASTNode* node);
-int evaluate_expr (ASTNode* node);
-
-void init_z3(Z3_context ctx);
-Z3_ast ast_to_z3(Z3_context ctx, ASTNode* node, HashMap* var_cache);
-
 
 #endif
