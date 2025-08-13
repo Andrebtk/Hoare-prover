@@ -20,4 +20,6 @@ int hash(HashMap* h,const char* str);
 HashEntry* create_HashEntry(const char* key, Z3_ast node);
 void insert_HashMap(HashMap* h, const char* name, Z3_ast node);
 
+void free_hashmap(HashMap* hm);
+void free_hashmap_with_context(HashMap* hm, Z3_context ctx);
 #endif

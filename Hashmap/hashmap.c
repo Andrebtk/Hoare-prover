@@ -56,3 +56,38 @@ void insert_HashMap(HashMap* h, const char* name, Z3_ast node) {
     prev->next = n;
     
 }
+
+void free_hashmap(HashMap* hm) {
+	if (!hm) return;
+	for (int i = 0; i < hm->size; ++i) {
+		HashEntry* cur = hm->table[i];
+		while (cur) {
+			HashEntry* next = cur->next;
+			if (cur->key) free(cur->key);
+			/* Do NOT free cur->value (Z3_ast) here — no context to dec_ref safely */
+			free(cur);
+			cur = next;
+		}
+	}
+	free(hm->table);
+	free(hm);
+}
+
+void free_hashmap_with_context(HashMap* hm, Z3_context ctx) {
+	if (!hm) return;
+	for (int i = 0; i < hm->size; ++i) {
+		HashEntry* cur = hm->table[i];
+		while (cur) {
+			HashEntry* next = cur->next;
+			if (cur->key) free(cur->key);
+			if (cur->value) {
+				/* decrement the Z3 reference if you incremented it at insertion */
+				Z3_dec_ref(ctx, cur->value);
+			}
+			free(cur);
+			cur = next;
+		}
+	}
+	free(hm->table);
+	free(hm);
+}
