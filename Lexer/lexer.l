@@ -8,9 +8,16 @@
 
 %%
 
+"//"[^\r\n]*   { /* skip line comment */ }
+
+
 [0-9]+ { 
 	yylval.num = atoi(yytext);
 	return NUMBER;
+}
+
+"/" {
+	return DIV;
 }
 
 "min" {
@@ -110,6 +117,14 @@
 	return RBRACE;
 }
 
+"<=" {
+	return LE;
+}
+
+">=" {
+	return GE;
+}
+
 "<" {
 	return LT;
 }
@@ -118,13 +133,7 @@
 	return GT;
 }
 
-"<=" {
-	return LE;
-}
 
-">=" {
-	return GE;
-}
 
 "PRECONDITION:" {
 	return PRECOND;

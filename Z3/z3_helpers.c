@@ -1,4 +1,6 @@
 #include "z3_helpers.h"
+#include <string.h>
+
 
 Z3_func_decl fact_func = NULL;
 

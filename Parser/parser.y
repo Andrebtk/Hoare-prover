@@ -137,6 +137,7 @@ condition:
     | NOT condition         { $$ = create_node_unary("not", $2); }
     | LPAREN condition RPAREN { $$ = $2; }
     | condition IMPLY condition { $$ = create_node_binary("->", $1, $3); }
+	| expr                  { $$ = $1; }
     ;
 
 expr:
@@ -182,30 +183,28 @@ void init_z3_functions(Z3_context ctx) {
 int main() {
 
 	printf("Start parsing...\n");
-    
-	
-	//yydebug = 1;
-	if (yyparse() == 0) {
-        printf("Parsing done.\n");
-        // root now points to your DLL with all statements
-
-		print_DLL(root, 0, 0);
-    } else {
-        printf("Parsing failed.\n");
-		return -1;
-    }
+	if (yyparse() == 0) { printf("Parsing done.\n"); } 
+	else { printf("Parsing failed.\n"); return -1; }
 
 	printf("Starting verify:\n");
 	
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
-	ASTNode* vc = create_node_binary("->", root->pre, result);
-	//print_ASTNode(result, -1, 0);
 
-	/*
-	printf("\nResult: ");
-	if (evaluate_formula(result) == 0)	{ printf(RED "The program is not valid\n" RESET); }
-	else 								{ printf(GREEN "The program is valid\n" RESET); }
-	*/
+	if (result == NULL) {
+		fprintf(stderr, RED "Verification aborted: weakest precondition generation failed.\n" RESET);
+		return -1;
+	}
+
+	ASTNode* vc = create_node_binary("->", root->pre, result);
+	if (!vc) {
+		fprintf(stderr, RED "Failed to construct verification condition (vc is NULL)\n" RESET);
+		return -1;
+	}
+
+	if ( (is_node_true(root->pre)) && evaluate_formula(result) == 1 )	{ 
+		printf(GREEN "The program is valid\n" RESET);
+		return 0;
+	}
 
 	// --------- Here comes Z3 verification ---------
 	// Create context and solver
@@ -224,31 +223,28 @@ int main() {
 
 	// Create var_cache hashmap for variable caching
 	HashMap* var_cache = create_HashMap(64);
-	//print_ASTNode(vc,-1,-1);
-	
 	
 	// Convert VC AST (result) to Z3_ast
 	Z3_ast res = ast_to_z3(ctx, vc, var_cache);
-
+	if (res == NULL) {
+		fprintf(stderr, RED "ast_to_z3 returned NULL (cannot check VC)\n" RESET);
+		return -1;
+	}
 	
 	// Assert negation of VC to check validity
-	
 	Z3_ast not_vc = Z3_mk_not(ctx, res);
-
-	
 	Z3_solver_assert(ctx, solver, not_vc);
-
 
 	// Check satisfiability
 	Z3_lbool z3_result = Z3_solver_check(ctx, solver);
 	if (z3_result == Z3_L_FALSE) {
 		printf(GREEN "Z3 says: The program is correct!\n" RESET);
-	} else if (z3_result == Z3_L_TRUE) {
+	} 
+	else if (z3_result == Z3_L_TRUE) {
 		printf(RED "Z3 says: The program is NOT correct!\n" RESET);
 		Z3_model model = Z3_solver_get_model(ctx, solver);
 		Z3_model_inc_ref(ctx, model);
-		// You can inspect the model here for counterexamples
-		// e.g. print variable values
+
 		Z3_model_dec_ref(ctx, model);
 	} else {
 		printf("Z3 says: Unknown result.\n");

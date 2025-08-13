@@ -1,0 +1,4 @@
+x = x + 1;
+
+PRECONDITION: x >= 0
+POSTCONDITION: x <= 0
