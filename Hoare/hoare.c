@@ -14,6 +14,14 @@ int fact(int n) {
 	
 }
 
+
+int is_node_true(ASTNode* node) {
+	return (node != NULL) 
+			&& (node->type == NODE_BOOL) 
+			&& (node->bool_value == 1);
+}
+
+
 ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
 
 	if (!code || !post) {

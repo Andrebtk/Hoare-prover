@@ -205,6 +205,12 @@ int main() {
 
 	printf("Starting verify:\n");
 	
+	if (is_node_true(root->pre)) {
+		printf(RED "ERROR ->\"PRECONDITION: true\" is not yet supported\n" RESET);
+		return 1;
+	}
+
+
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
 	ASTNode* vc = create_node_binary("->", root->pre, result);
 
