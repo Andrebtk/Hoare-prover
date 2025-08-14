@@ -34,6 +34,10 @@
 %token PLUS MINUS MUL DIV LT GT AND OR
 %token GE LE
 %token PRECOND POSTCOND 
+%token MOD
+
+
+
 
 %token TRUE FALSE
 
@@ -58,7 +62,7 @@
 %right NOT
 %nonassoc LT GT EQ NEQ
 %left PLUS MINUS
-%left MUL DIV
+%left MUL DIV MOD
 %right ASSIGN
 
 
@@ -139,6 +143,7 @@ condition:
     | NOT condition         { $$ = create_node_unary("not", $2); }
     | LPAREN condition RPAREN { $$ = $2; }
     | condition IMPLY condition { $$ = create_node_binary("->", $1, $3); }
+	| expr                  { $$ = $1; }
     ;
 
 expr:
@@ -148,6 +153,7 @@ expr:
     | expr MINUS expr       { $$ = create_node_binary("-", $1, $3); }
     | expr MUL expr         { $$ = create_node_binary("*", $1, $3); }
     | expr DIV expr         { $$ = create_node_binary("/", $1, $3); }
+	| expr MOD expr 		{ $$ = create_node_binary("%", $1, $3); }
     | LPAREN expr RPAREN    { $$ = $2; }
     | MIN LPAREN expr COMMA expr RPAREN {
         $$ = create_node_Func("min", $3, $5);
@@ -201,21 +207,11 @@ int main() {
 	
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
 	ASTNode* vc = create_node_binary("->", root->pre, result);
-	//print_ASTNode(result, -1, 0);
-
-	/*
-	printf("\nResult: ");
-	if (evaluate_formula(result) == 0)	{ printf(RED "The program is not valid\n" RESET); }
-	else 								{ printf(GREEN "The program is valid\n" RESET); }
-	*/
 
 	// --------- Here comes Z3 verification ---------
 	// Create context and solver
 	
 	Z3_config cfg = Z3_mk_config();
-	Z3_set_param_value(cfg, "trace", "true");
-	Z3_set_param_value(cfg, "stats", "true");
-	//Z3_set_param_value(cfg, "trace_file_name", "z3_trace.log");
 	Z3_context ctx = Z3_mk_context(cfg);
 	Z3_del_config(cfg);
 

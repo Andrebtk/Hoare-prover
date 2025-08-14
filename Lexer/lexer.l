@@ -1,5 +1,6 @@
 %{ 
 	#include <stdio.h>
+
 	#include "../Ast/ast.h"
 	#include "../Parser/parser.tab.h"  /* not parser.y */
 
@@ -8,16 +9,9 @@
 
 %%
 
-"//"[^\r\n]*   { /* skip line comment */ }
-
-
 [0-9]+ { 
 	yylval.num = atoi(yytext);
 	return NUMBER;
-}
-
-"/" {
-	return DIV;
 }
 
 "min" {
@@ -33,6 +27,8 @@
 	return FACT;
 }
 
+"%"   { return MOD; }
+
 "->" {
 	return IMPLY;
 }
@@ -45,7 +41,15 @@
 	return INVARIANT;
 }
 
+"INVARIANT" {
+	return INVARIANT;
+}
+
 "variant" {
+	return VARIANT;
+}
+
+"VARIANT" {
 	return VARIANT;
 }
 
@@ -117,14 +121,6 @@
 	return RBRACE;
 }
 
-"<=" {
-	return LE;
-}
-
-">=" {
-	return GE;
-}
-
 "<" {
 	return LT;
 }
@@ -133,7 +129,13 @@
 	return GT;
 }
 
+"<=" {
+	return LE;
+}
 
+">=" {
+	return GE;
+}
 
 "PRECONDITION:" {
 	return PRECOND;
@@ -168,6 +170,9 @@
 	return NOT;
 }
 
+"/"   { 
+	return DIV; 
+}
 
 
 

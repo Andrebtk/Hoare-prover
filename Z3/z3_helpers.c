@@ -104,9 +104,11 @@ Z3_ast ast_to_z3(Z3_context ctx, ASTNode* node, HashMap* var_cache) {
 			if ( strcmp(node->binary_op.op,"==")==0 ) { return Z3_mk_eq(ctx, left, right); }
 			if ( strcmp(node->binary_op.op,"!=")==0 ) { return Z3_mk_distinct(ctx, 2, args); }
 			if (strcmp(node->binary_op.op, "and") == 0) { return Z3_mk_and(ctx, 2, args); }
+			if (strcmp(node->binary_op.op, "or") == 0) { return Z3_mk_or(ctx, 2, args); }
 			if (strcmp(node->binary_op.op, ">=") == 0) { return Z3_mk_ge(ctx, left, right);	}
 			if (strcmp(node->binary_op.op, "<=") == 0) { return Z3_mk_le(ctx, left, right); }
 			if (strcmp(node->binary_op.op, "->") == 0) { return Z3_mk_implies(ctx, left, right); }
+			if (strcmp(node->binary_op.op, "%") == 0) { return Z3_mk_mod(ctx, left, right); }
 
 			fprintf(stderr, "ast_to_z3: Unknown binary op '%s'\n", node->binary_op.op);
 			return NULL;
