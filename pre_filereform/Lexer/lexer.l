@@ -1,7 +1,8 @@
 %{ 
 	#include <stdio.h>
-	#include "data-struct.h"
-	#include "parser/parser.tab.h"
+
+	#include "../Ast/ast.h"
+	#include "../Parser/parser.tab.h"  /* not parser.y */
 
 %}
 

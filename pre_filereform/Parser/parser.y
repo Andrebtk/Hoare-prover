@@ -1,9 +1,15 @@
 %{ 
 	/* C declarations: includes, helper functions, variables */
+
 	#include <stdio.h>
 	#include <stdlib.h>
-	#include "data-struct.h"
-	#include "data-struct.h"
+	#include <string.h>
+	#include "../Ast/ast.h"
+	#include "../Hoare/hoare.h"
+	#include "../Z3/z3_helpers.h"
+	#include "../Hashmap/hashmap.h"
+	#include "../Hoare/hoare.h"
+
 
 	DLL* root = NULL;
 

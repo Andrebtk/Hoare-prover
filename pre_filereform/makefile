@@ -1,16 +1,33 @@
-main: parser/parser.tab.c parser/parser.tab.h lexer/lex.yy.c data-struct.c
-	gcc -I. -o myparser parser/parser.tab.c lexer/lex.yy.c data-struct.c -lz3 -lfl
+# Nom de l'exécutable
+TARGET = myparser
 
-parser/parser.tab.c parser/parser.tab.h: parser/parser.y 
-	bison -t -d -o parser/parser.tab.c parser/parser.y
+# Sources
+SOURCES = Parser/parser.tab.c \
+          Lexer/lex.yy.c \
+          Ast/ast.c \
+          Hashmap/hashmap.c \
+          Hoare/hoare.c \
+          Z3/z3_helpers.c
 
+# Règle par défaut
+all: $(TARGET)
 
-lexer/lex.yy.c: lexer/lexer.l parser/parser.tab.h
-	flex -o lexer/lex.yy.c lexer/lexer.l
+# Compilation finale
+$(TARGET): $(SOURCES)
+	gcc \
+	    -I. -IAst -IHashmap -IHoare -IZ3 -IParser -ILexer \
+	    -o $(TARGET) $(SOURCES) -lz3 -lfl
 
-data-struct: 
-	gcc -o data-struct data-struct.c 
+# Génération du parser
+Parser/parser.tab.c Parser/parser.tab.h: Parser/parser.y
+	bison -t -d -o Parser/parser.tab.c Parser/parser.y
 
+# Génération du lexer
+Lexer/lex.yy.c: Lexer/lexer.l Parser/parser.tab.h
+	flex -o Lexer/lex.yy.c Lexer/lexer.l
 
+# Nettoyage
 clean:
-	rm myparser parser/parser.tab.c parser/parser.tab.h lexer/lex.yy.c
+	rm -f $(TARGET) Parser/parser.tab.c Parser/parser.tab.h Lexer/lex.yy.c
+
+.PHONY: all clean
