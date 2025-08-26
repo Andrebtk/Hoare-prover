@@ -187,107 +187,86 @@ void init_z3_functions(Z3_context ctx) {
 
     fact_func = Z3_mk_func_decl(ctx, fact_sym, 1, domain, int_sort);
 }
-
 int main() {
-	
-	printf("Start parsing...\n");
+    printf("Start parsing...\n");
 
-	
-    
-	
-	//yydebug = 1;
-	if (yyparse() == 0) {
+    // Parse the input
+    if (yyparse() == 0) {
         printf("Parsing done.\n");
         // root now points to your DLL with all statements
-
-		//print_DLL(root, 0, 0);
+        // print_DLL(root, 0, 0);
     } else {
         printf("Parsing failed.\n");
-		return -1;
+        return -1;
     }
 
+    yylex_destroy();
 
-	yylex_destroy();
+    printf("Starting verify:\n");
 
-	printf("Starting verify:\n");
-	
-	if (is_node_true(root->pre)) {
-		printf(RED "ERROR ->\"PRECONDITION: true\" is not yet supported\n" RESET);
-		free_DLL(root);
-		return 1;
-	}
+    if (is_node_true(root->pre)) {
+        printf(RED "ERROR ->\"PRECONDITION: true\" is not yet supported\n" RESET);
+        free_DLL(root); // free DLL and contained ASTNodes
+        return 1;
+    }
 
-	
-	ASTNode* result = hoare_prover(root, root->pre, root->post);
+    // Hoare prover: result is a new ASTNode, caller owns it
+    ASTNode* result = hoare_prover(root, root->pre, root->post);
 
-	ASTNode* vc = create_node_binary("->", clone_node(root->pre), result);
-	
-	
-	// --------- Here comes Z3 verification ---------
-	// Create context and solver
-	Z3_config cfg = Z3_mk_config();
-	Z3_context ctx = Z3_mk_context(cfg);
-	Z3_del_config(cfg);
+    // Create verification condition VC (new ASTNode, caller owns it)
+    ASTNode* vc = create_node_binary("->", clone_node(root->pre), clone_node(result));
 
-	
-	init_z3_functions(ctx);
-	init_z3(ctx);
-	
+    // --------- Z3 verification ---------
+    Z3_config cfg = Z3_mk_config();
+    Z3_context ctx = Z3_mk_context(cfg);
+    Z3_del_config(cfg);
 
-	Z3_solver solver = Z3_mk_solver(ctx);
-	Z3_solver_inc_ref(ctx, solver);
+    init_z3_functions(ctx);
+    init_z3(ctx);
 
-	// Create var_cache hashmap for variable caching
-	HashMap* var_cache = create_HashMap(16);
-	//print_ASTNode(vc,-1,-1);
-	
-	
-	// Convert VC AST (result) to Z3_ast
-	Z3_ast res = ast_to_z3(ctx, vc, var_cache);
-	Z3_inc_ref(ctx, res); 
-	
-	// Assert negation of VC to check validity
-	
-	Z3_ast not_vc = Z3_mk_not(ctx, res);
-	Z3_inc_ref(ctx, not_vc); 
+    Z3_solver solver = Z3_mk_solver(ctx);
+    Z3_solver_inc_ref(ctx, solver);
 
-	
-	Z3_solver_assert(ctx, solver, not_vc);
-	
+    HashMap* var_cache = create_HashMap(16);
 
-	// Check satisfiability
-	Z3_lbool z3_result = Z3_solver_check(ctx, solver);
-	if (z3_result == Z3_L_FALSE) {
-		printf(GREEN "Z3 says: The program is correct!\n" RESET);
-	} else if (z3_result == Z3_L_TRUE) {
-		printf(RED "Z3 says: The program is NOT correct!\n" RESET);
-		Z3_model model = Z3_solver_get_model(ctx, solver);
-		Z3_model_inc_ref(ctx, model);
-		// You can inspect the model here for counterexamples
-		// e.g. print variable values
-		Z3_model_dec_ref(ctx, model);
-	} else {
-		printf("Z3 says: Unknown result.\n");
-	}
+    Z3_ast res = ast_to_z3(ctx, vc, var_cache);
+    Z3_inc_ref(ctx, res);
 
-	// undo solver ref
-	Z3_solver_dec_ref(ctx, solver);
+    Z3_ast not_vc = Z3_mk_not(ctx, res);
+    Z3_inc_ref(ctx, not_vc);
 
-	// free any ASTs you inc_ref'd
-	Z3_dec_ref(ctx, res);
-	Z3_dec_ref(ctx, not_vc);
+    Z3_solver_assert(ctx, solver, not_vc);
 
-	// free any Z3 objects held in var_cache
-	free_hashmap_with_context(var_cache, ctx);
+    Z3_lbool z3_result = Z3_solver_check(ctx, solver);
+    if (z3_result == Z3_L_FALSE) {
+        printf(GREEN "Z3 says: The program is correct!\n" RESET);
+    } else if (z3_result == Z3_L_TRUE) {
+        printf(RED "Z3 says: The program is NOT correct!\n" RESET);
+        Z3_model model = Z3_solver_get_model(ctx, solver);
+        Z3_model_inc_ref(ctx, model);
+        // inspect model if needed
+        Z3_model_dec_ref(ctx, model);
+    } else {
+        printf("Z3 says: Unknown result.\n");
+    }
 
-	// finally remove context (this frees most Z3 internals associated with ctx)
-	Z3_del_context(ctx);
+    printf("root=%p root->pre=%p root->post=%p vc=%p\n",
+           (void*)root, (void*)root->pre, (void*)root->post, (void*)vc);
 
-	free_ASTNode(vc);
-	free_DLL(root);
-	Z3_finalize_memory();
+    // Cleanup Z3
+    Z3_solver_dec_ref(ctx, solver);
+    Z3_dec_ref(ctx, res);
+    Z3_dec_ref(ctx, not_vc);
+    free_hashmap_with_context(var_cache, ctx);
+    Z3_del_context(ctx);
 
-	printf("DONE\n");
-	return 0;
+    // Free ASTs
+    free_ASTNode(vc);
+    free_ASTNode(result); // result is freed here
+    free_DLL(root);       // safely frees DLL and contained ASTNodes
 
+    Z3_finalize_memory();
+
+    printf("DONE\n");
+    return 0;
 }

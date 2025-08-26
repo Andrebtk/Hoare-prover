@@ -615,19 +615,24 @@ void free_ll(line_linkedlist* l) {
 void free_DLL(DLL* dll) {
     if (!dll) return;
 
-    free_ASTNode(dll->pre);
-    free_ASTNode(dll->post);
+    // free pre/post if not already freed
+    if (dll->pre && !dll->pre->freed) free_ASTNode(dll->pre);
+    if (dll->post && !dll->post->freed) free_ASTNode(dll->post);
 
+    // free linked list
     line_linkedlist* current = dll->first;
     while (current) {
         line_linkedlist* next = current->next;
-        // free_ASTNode will check node->freed, so it's safe
-        free_ASTNode(current->node);
+        if (current->node && !current->node->freed)
+            free_ASTNode(current->node);
         free(current);
         current = next;
     }
 
     free(dll);
 }
+
+
+
 
 

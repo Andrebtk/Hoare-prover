@@ -28,20 +28,19 @@ ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
         return NULL;
     }
 
-    line_linkedlist *current = code->last;
-    /* hoare_prover takes ownership of 'post' */
-    ASTNode* wp = post;
+    ASTNode* wp = clone_node(post);  // OWNED clone
+    line_linkedlist* current = code->last;
 
     while (current != NULL) {
-        ASTNode* new_wp = hoare_statement(current->node, wp);
-        /* hoare_statement is expected to return a NEW node (the new wp)
-           and not depend on 'wp' after return, so we free the old wp here. */
-        free_ASTNode(wp);
+        ASTNode* wp_clone = clone_node(wp);
+        ASTNode* new_wp = hoare_statement(current->node, wp_clone);
+        free_ASTNode(wp_clone);  // free temporary
+        free_ASTNode(wp);        // free old wp
         wp = new_wp;
         current = current->prec;
     }
 
-    return wp; /* caller must free the returned wp when done */
+    return wp;
 }
 
 
@@ -79,6 +78,8 @@ ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post ) {
 	return result;
 }
 
+
+
 /*
 	{P} if B then { C1 } else { C2 } {Q}
 */
@@ -112,11 +113,15 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 	}
 
 	// Build implication nodes
-	ASTNode* left = create_node_binary("->", clone_node(condition), wp_if);
-	ASTNode* right = create_node_binary("->", create_node_unary("not", clone_node(condition)), wp_else);
+	ASTNode* cond_clone1 = clone_node(condition);
+	ASTNode* cond_clone2 = clone_node(condition);
+
+	ASTNode* left = create_node_binary("->", cond_clone1, wp_if);
+	ASTNode* right = create_node_binary("->", create_node_unary("not", cond_clone2), wp_else);
 
 	ASTNode* result = create_node_binary("and", left, right);
 	return result;
+
 }
 
 
@@ -129,23 +134,23 @@ ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
     ASTNode* variant = node->While.variant;
     DLL* block_code = node->While.block_main;
 
+    // === Partial correctness ===
     ASTNode* I_and_B = create_node_binary("and", clone_node(invariant), clone_node(condition));
     ASTNode* wp_body = hoare_prover(block_code, I_and_B, clone_node(invariant));
 
     ASTNode* I_and_notB = create_node_binary("and", clone_node(invariant),
                                              create_node_unary("not", clone_node(condition)));
-    ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
     ASTNode* left = create_node_binary("->", I_and_B, wp_body);
-
+    ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
     ASTNode* partial_correctness = create_node_binary("and", left, right);
 
-    // Total correctness: variant checks
+    // === Total correctness: variant checks ===
     ASTNode* variant_after = clone_node(variant);
     line_linkedlist* cur = block_code->first;
     while (cur != NULL) {
         if (cur->node->type == NODE_ASSIGN) {
             ASTNode* tmp = substitute(variant_after, cur->node->Assign.id, cur->node->Assign.expr);
-            free_ASTNode(variant_after);  // free old
+            free_ASTNode(variant_after);  // safe: variant_after not referenced elsewhere
             variant_after = tmp;
         }
         cur = cur->next;
@@ -154,11 +159,12 @@ ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
     ASTNode* variant_decreases = create_node_binary("<", variant_after, clone_node(variant));
     ASTNode* variant_nonnegative = create_node_binary(">=", clone_node(variant), create_node_number(0));
     ASTNode* decrease_condition = create_node_binary("and", variant_decreases, variant_nonnegative);
-    
-    // FIX: Clone I_and_B instead of reusing it (already used in partial_correctness)
+
+    // Clone invariant + condition again for termination condition
     ASTNode* I_and_B_clone = create_node_binary("and", clone_node(invariant), clone_node(condition));
     ASTNode* termination_condition = create_node_binary("->", I_and_B_clone, decrease_condition);
 
+    // === Combine partial correctness and termination ===
     ASTNode* result = create_node_binary("and", partial_correctness, termination_condition);
     return result;
 }
