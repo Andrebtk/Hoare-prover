@@ -1,10 +1,6 @@
 {
     "files.associations": {
-        "ast.h": "c",
-        "stdlib.h": "c",
-        "*.t": "c",
         "*.y": "c",
-        "functional": "c",
-        "z3_helpers.h": "c"
+        "z3.h": "c"
     }
 }

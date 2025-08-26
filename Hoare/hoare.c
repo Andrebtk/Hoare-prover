@@ -36,6 +36,8 @@ ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
 		ASTNode* wp_clone = clone_node(wp);
 		ASTNode* new_wp   = hoare_statement(current->node, wp_clone);
 		// optionally free(wp_clone) if you don't need the old tree any more
+		free_ASTNode(wp_clone); 
+
 		wp = new_wp;
 		current = current->prec;
 	}
@@ -70,7 +72,7 @@ ASTNode* hoare_statement(ASTNode* node, ASTNode* post) {
 
 }
 
-ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post /*DLL* code*/) {
+ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post ) {
 	return substitute(post, 
 						node->Assign.id, 
 						node->Assign.expr);
@@ -97,15 +99,19 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 		return NULL;
 	}
 
+	// Clone post for separate branches
+	ASTNode* post_clone_if = clone_node(post);
+	ASTNode* post_clone_else = clone_node(post);
 
-	ASTNode* wp_if = hoare_prover(block_if, NULL, clone_node(post));
-	ASTNode* wp_else = hoare_prover(block_else, NULL, clone_node(post));
+	ASTNode* wp_if = hoare_prover(block_if, NULL, post_clone_if);
+	ASTNode* wp_else = hoare_prover(block_else, NULL, post_clone_else);
 
-	ASTNode* left = create_node_binary("->", condition, wp_if);
-	ASTNode* n_right = create_node_unary("not", condition);
-	ASTNode* right = create_node_binary("->", n_right, wp_else);
+	// Build implication nodes
+	ASTNode* left = create_node_binary("->", clone_node(condition), wp_if);
+	ASTNode* right = create_node_binary("->", create_node_unary("not", clone_node(condition)), wp_else);
 
-	return create_node_binary("and", left, right);
+	ASTNode* result = create_node_binary("and", left, right);
+	return result;
 }
 
 
@@ -113,48 +119,43 @@ ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
 	{I} while B do C {I ∧ ¬B}
 */
 ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post) {
-	ASTNode* condition = node->While.condition; // B
-	ASTNode* invariant = node->While.invariant; // I
-	ASTNode* variant = node->While.variant;
-	DLL* block_code = node->While.block_main;   // C
+    ASTNode* condition = node->While.condition;
+    ASTNode* invariant = node->While.invariant;
+    ASTNode* variant = node->While.variant;
+    DLL* block_code = node->While.block_main;
 
+    ASTNode* I_and_B = create_node_binary("and", clone_node(invariant), clone_node(condition));
+    ASTNode* wp_body = hoare_prover(block_code, I_and_B, clone_node(invariant));
 
-	ASTNode* notB = create_node_unary("not", clone_node(condition));
-	ASTNode* I_and_notB  = create_node_binary("and", clone_node(invariant), notB);
-	ASTNode* I_and_B = create_node_binary("and", clone_node(invariant), clone_node(condition));
+    ASTNode* I_and_notB = create_node_binary("and", clone_node(invariant),
+                                             create_node_unary("not", clone_node(condition)));
+    ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
+    ASTNode* left = create_node_binary("->", I_and_B, wp_body);
 
-	ASTNode* wp_body = hoare_prover(block_code, I_and_B, clone_node(invariant));
-	
-	
-	ASTNode* right = create_node_binary("->", I_and_notB, clone_node(post));
-	ASTNode* left = create_node_binary("->", I_and_B, wp_body);
+    ASTNode* partial_correctness = create_node_binary("and", left, right);
 
-	// partial correctness: ((I ∧ B) -> wp_body) ∧ ((I ∧ ¬B) -> post)
-	ASTNode* partial_correctness = create_node_binary("and", left, right);
+    // Total correctness: variant checks
+    ASTNode* variant_after = clone_node(variant);
+    line_linkedlist* cur = block_code->first;
+    while (cur != NULL) {
+        if (cur->node->type == NODE_ASSIGN) {
+            ASTNode* tmp = substitute(variant_after, cur->node->Assign.id, cur->node->Assign.expr);
+            free_ASTNode(variant_after);  // free old
+            variant_after = tmp;
+        }
+        cur = cur->next;
+    }
 
+    ASTNode* variant_decreases = create_node_binary("<", variant_after, clone_node(variant));
+    ASTNode* variant_nonnegative = create_node_binary(">=", clone_node(variant), create_node_number(0));
+    ASTNode* decrease_condition = create_node_binary("and", variant_decreases, variant_nonnegative);
+    
+    // FIX: Clone I_and_B instead of reusing it (already used in partial_correctness)
+    ASTNode* I_and_B_clone = create_node_binary("and", clone_node(invariant), clone_node(condition));
+    ASTNode* termination_condition = create_node_binary("->", I_and_B_clone, decrease_condition);
 
-	// === total correctness additional checks ===
-	ASTNode* variant_after = clone_node(variant);
-	line_linkedlist* cur = block_code->first;
-	while (cur != NULL) {
-		if (cur->node->type == NODE_ASSIGN) {
-			variant_after = substitute(variant_after, cur->node->Assign.id, cur->node->Assign.expr);
-		}
-		cur = cur->next;
-	}
-
-	//create: v' < V
-	ASTNode* variant_decreases = create_node_binary("<", variant_after, clone_node(variant));
-
-	//Create: v >= 0
-	ASTNode* node_zero = create_node_number(0);
-	ASTNode* variant_nonnegative = create_node_binary(">=", clone_node(variant), node_zero);
-
-	// total correctness: (I ∧ B) -> (variant_after < variant ∧ 0 <= variant)
-	ASTNode* decrease_condition = create_node_binary("and", variant_decreases, variant_nonnegative);
-	ASTNode* termination_condition = create_node_binary("->", I_and_B, decrease_condition);
-	
-	return create_node_binary("and", partial_correctness, termination_condition);
+    ASTNode* result = create_node_binary("and", partial_correctness, termination_condition);
+    return result;
 }
 
 

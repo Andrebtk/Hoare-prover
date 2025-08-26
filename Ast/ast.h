@@ -98,10 +98,10 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
 ASTNode* clone_node(const ASTNode* orig);
 
 
-/*
+
 void free_ll(line_linkedlist* l);
 void free_DLL(DLL* l);
 void free_ASTNode(ASTNode* node);
-*/
+
 
 #endif

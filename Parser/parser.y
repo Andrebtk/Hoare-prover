@@ -197,7 +197,7 @@ int main() {
         printf("Parsing done.\n");
         // root now points to your DLL with all statements
 
-		print_DLL(root, 0, 0);
+		//print_DLL(root, 0, 0);
     } else {
         printf("Parsing failed.\n");
 		return -1;
@@ -207,16 +207,16 @@ int main() {
 	
 	if (is_node_true(root->pre)) {
 		printf(RED "ERROR ->\"PRECONDITION: true\" is not yet supported\n" RESET);
+		free_DLL(root);
 		return 1;
 	}
 
 
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
-	ASTNode* vc = create_node_binary("->", root->pre, result);
+	ASTNode* vc = create_node_binary("->", clone_node(root->pre), result);
 
 	// --------- Here comes Z3 verification ---------
 	// Create context and solver
-	
 	Z3_config cfg = Z3_mk_config();
 	Z3_context ctx = Z3_mk_context(cfg);
 	Z3_del_config(cfg);
@@ -236,15 +236,16 @@ int main() {
 	
 	// Convert VC AST (result) to Z3_ast
 	Z3_ast res = ast_to_z3(ctx, vc, var_cache);
-
+	Z3_inc_ref(ctx, res); 
 	
 	// Assert negation of VC to check validity
 	
 	Z3_ast not_vc = Z3_mk_not(ctx, res);
+	Z3_inc_ref(ctx, not_vc); 
 
 	
 	Z3_solver_assert(ctx, solver, not_vc);
-
+	
 
 	// Check satisfiability
 	Z3_lbool z3_result = Z3_solver_check(ctx, solver);
@@ -262,10 +263,21 @@ int main() {
 	}
 
 	// Cleanup
+	Z3_dec_ref(ctx, res);
+	Z3_dec_ref(ctx, not_vc);
+
+	free_hashmap_with_context(var_cache, ctx);
+
+	
+
 	Z3_solver_dec_ref(ctx, solver);
+	
 	Z3_del_context(ctx);
+
+	free_ASTNode(vc);
+	free_DLL(root);
 	
-	
+	printf("DONE\n");
 	return 0;
 
 }

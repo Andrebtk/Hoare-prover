@@ -2,9 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+ASTNode* alloc_node(NodeType type) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    if (!node) return NULL;
+    memset(node, 0, sizeof(ASTNode));
+    node->type = type;
+    return node;
+}
+
 ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right) {
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_BIN_OP;
+     ASTNode* res = alloc_node(NODE_BIN_OP);
 
     res->binary_op.op = strdup(type);
     res->binary_op.left = left;
@@ -13,8 +20,7 @@ ASTNode* create_node_binary(char* type, ASTNode* left, ASTNode* right) {
 }
 
 ASTNode* create_node_unary(char* type, ASTNode* child) {
-	ASTNode* res = malloc(sizeof(ASTNode));
-	res->type = NODE_UNARY_OP;
+	ASTNode* res = alloc_node(NODE_UNARY_OP);
 
 	res->unary_op.op = strdup(type);
 	res->unary_op.child = child;
@@ -24,54 +30,48 @@ ASTNode* create_node_unary(char* type, ASTNode* child) {
 
 
 ASTNode* create_node_number(int num) {
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_NUMBER;
+	ASTNode* res = alloc_node(NODE_NUMBER);
 
-    res->number = num;
-    return res;
+	res->number = num;
+	return res;
 }
 
 ASTNode* create_node_id(char *input) {
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_ID;
+	ASTNode* res = alloc_node(NODE_ID);
 
-    res->id_name = strdup(input);
-    return res;
+	res->id_name = strdup(input);
+	return res;
 }
 
 
 ASTNode* create_node_assign(char* id, ASTNode* expr){
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_ASSIGN;
-    res->Assign.id = strdup(id);
-    res->Assign.expr = expr;
-    return res;
+	ASTNode* res = alloc_node(NODE_ASSIGN);
+	res->Assign.id = strdup(id);
+	res->Assign.expr = expr;
+	return res;
 }
 
 ASTNode* create_node_If_Else(ASTNode* condition, DLL* block_if, DLL* block_else) {
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_IF_ELSE;
+	ASTNode* res = alloc_node(NODE_IF_ELSE);
 
-    res->If.condition = condition;
-    res->If.block_if = block_if;
+	res->If.condition = condition;
+	res->If.block_if = block_if;
 	res->If.block_else = block_else;
-    return res;
+	return res;
 }
 
 ASTNode* create_node_While(ASTNode* condition, DLL* block, ASTNode* invariant, ASTNode* variant) {
-    ASTNode* res = malloc(sizeof(ASTNode));
-    res->type = NODE_WHILE;
+	ASTNode* res = alloc_node(NODE_WHILE);
 
-    res->While.condition = condition;
-    res->While.block_main = block;
+	res->While.condition = condition;
+	res->While.block_main = block;
 	res->While.invariant = invariant;
 	res->While.variant = variant;
 	return res;
 }
 
 ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2) {
-	ASTNode* res = malloc(sizeof(ASTNode));
-	res->type = NODE_FUNCTION;
+	ASTNode* res = alloc_node(NODE_FUNCTION);
 
 	res->function.fname = strdup(name);
 	res->function.arg1 = a1;
@@ -80,19 +80,21 @@ ASTNode* create_node_Func(const char* name, ASTNode* a1, ASTNode* a2) {
 }
 
 ASTNode* create_node_bool(int value) {
-    ASTNode* node = malloc(sizeof(ASTNode));
-    node->type = NODE_BOOL;
-    node->bool_value = value;
-    return node;
+	ASTNode* res = alloc_node(NODE_BOOL);
+
+	res->bool_value = value;
+	return res;
 }
 
 
 
 DLL* create_DLL() {
-    DLL* res = malloc(sizeof(DLL));
-    res->first = NULL;
-    res->last = NULL;
-    return res;
+	DLL* res = malloc(sizeof(DLL));
+	res->first = NULL;
+	res->last = NULL;
+	res->pre = NULL;
+	res->post = NULL;
+	return res;
 }
 
 line_linkedlist* create_ll(ASTNode* node) {
@@ -360,6 +362,8 @@ void print_DLL(DLL* dll, int prof, int pre) {
 
    
 }
+
+
 ASTNode* clone_node(const ASTNode* orig) {
 	if (!orig) return NULL;
 	switch (orig->type) {
@@ -382,7 +386,7 @@ ASTNode* clone_node(const ASTNode* orig) {
 
 		case NODE_UNARY_OP: { 
 			return create_node_unary(
-				strdup(orig->unary_op.op),
+				orig->unary_op.op,
 				clone_node(orig->unary_op.child)
 			);
 			break;
@@ -402,12 +406,16 @@ ASTNode* clone_node(const ASTNode* orig) {
 
 		case NODE_FUNCTION: {
 			return create_node_Func(
-				strdup(orig->function.fname),
+				orig->function.fname,
 				clone_node(orig->function.arg1),
 				clone_node(orig->function.arg2)
 			);
 
 			break;
+		}
+
+		case NODE_BOOL: {
+			return create_node_bool(orig->bool_value);
 		}
 
 		case NODE_IF_ELSE: {
@@ -452,11 +460,13 @@ ASTNode* clone_node(const ASTNode* orig) {
 ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 	if (formula == NULL) return NULL;
 
+	ASTNode* new_node = NULL;
+
 	switch (formula->type) {
 		case NODE_ASSIGN: {
 
 			ASTNode* new_expr = substitute(formula->Assign.expr, var, replacement);
-			return create_node_assign(formula->Assign.id, new_expr);
+			new_node = create_node_assign(formula->Assign.id, new_expr);
 			break;
 		}
 
@@ -465,16 +475,34 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 
 			ASTNode* left = substitute(formula->binary_op.left, var, replacement);
 			ASTNode* right = substitute(formula->binary_op.right, var, replacement);
-			return create_node_binary(formula->binary_op.op, left, right);
+			new_node = create_node_binary(formula->binary_op.op, left, right);
 
 			break;
 		}
 
 
 		case NODE_IF_ELSE: {
-			return NULL;
+			// Substitute in the condition
+			ASTNode* new_condition = substitute(formula->If.condition, var, replacement);
+
+			// Substitute in the "then" block
+			DLL* new_block_if = create_DLL();
+			for (line_linkedlist* it = formula->If.block_if->first; it != NULL; it = it->next) {
+				ASTNode* new_node = substitute(it->node, var, replacement);
+				DLL_append(new_block_if, new_node);
+			}
+
+			// Substitute in the "else" block
+			DLL* new_block_else = create_DLL();
+			for (line_linkedlist* it = formula->If.block_else->first; it != NULL; it = it->next) {
+				ASTNode* new_node = substitute(it->node, var, replacement);
+				DLL_append(new_block_else, new_node);
+			}
+
+			new_node = create_node_If_Else(new_condition, new_block_if, new_block_else);
 			break;
 		}
+
 
 		case NODE_WHILE: {
 			ASTNode* new_condition = substitute(formula->While.condition, var, replacement);
@@ -490,22 +518,22 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 				cur = cur->next;
 			}
 			
-			return create_node_While(new_condition, new_block, new_invariant, new_variant);
+			new_node =  create_node_While(new_condition, new_block, new_invariant, new_variant);
 			break;
 		}
 
 
 		case NODE_NUMBER: {
-			return create_node_number(formula->number);
+			new_node = create_node_number(formula->number);
 			break;
 		}
 
 		case NODE_ID: {
 			if(strcmp(formula->id_name, var) == 0) {
-				return clone_node(replacement);
+				new_node = clone_node(replacement);
 			}
 			else {
-				return create_node_id(formula->id_name);
+				new_node =  create_node_id(formula->id_name);
 			}
 			break;
 		}
@@ -514,16 +542,108 @@ ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
 			// Substitute in the function's arguments
 			ASTNode* new_arg1 = substitute(formula->function.arg1, var, replacement);
 			ASTNode* new_arg2 = substitute(formula->function.arg2, var, replacement);
-			return create_node_Func(formula->function.fname, new_arg1, new_arg2);
+			new_node =  create_node_Func(formula->function.fname, new_arg1, new_arg2);
 			break;
 		}
 
 		case NODE_UNARY_OP: {
 			// Substitute in the child subtree
 			ASTNode* new_child = substitute(formula->unary_op.child, var, replacement);
-			return create_node_unary(formula->unary_op.op, new_child);
+			new_node =  create_node_unary(formula->unary_op.op, new_child);
 			break;
 		}
 
+		
+
 	}
+	//free_ASTNode(formula);
+	return new_node;
+}
+
+
+void free_ll(line_linkedlist* l) {
+	while(l) {
+		line_linkedlist* next = l->next;
+		free_ASTNode(l->node);
+		free(l);
+		l = next;
+	}
+}
+
+
+void free_DLL(DLL* l) {
+	if(l==NULL) return;
+
+	free_ASTNode(l->pre);
+	free_ASTNode(l->post);
+
+	free_ll(l->first);
+	free(l);
+}
+
+
+void free_ASTNode(ASTNode* node) {
+	if (node == NULL) return ;
+
+	switch (node->type) {
+		case NODE_ASSIGN: {
+			if(node->Assign.id) free(node->Assign.id);
+			if(node->Assign.expr) free_ASTNode(node->Assign.expr);
+			break;
+		}
+
+		case NODE_FUNCTION: {
+			if(node->function.fname) free(node->function.fname);
+			if(node->function.arg1) free_ASTNode(node->function.arg1);
+			if(node->function.arg2) free_ASTNode(node->function.arg2);
+			break;
+		}
+
+		case NODE_IF_ELSE: {
+			if(node->If.condition) free_ASTNode(node->If.condition);
+			if(node->If.block_if) free_DLL(node->If.block_if);
+			if(node->If.block_else) free_DLL(node->If.block_else);  // Check for NULL
+			break;
+		}
+
+		case NODE_WHILE: {
+			if(node->While.condition) free_ASTNode(node->While.condition);
+			if(node->While.invariant) free_ASTNode(node->While.invariant);
+			if(node->While.variant) free_ASTNode(node->While.variant);
+			if(node->While.block_main) free_DLL(node->While.block_main);
+			break;
+		}
+
+		case NODE_BIN_OP: {
+			if(node->binary_op.op) free(node->binary_op.op);
+			if(node->binary_op.left) free_ASTNode(node->binary_op.left);
+			if(node->binary_op.right) free_ASTNode(node->binary_op.right);
+			break;
+		}
+
+		case NODE_UNARY_OP: {
+			if(node->unary_op.op) free(node->unary_op.op);
+			if(node->unary_op.child) free_ASTNode(node->unary_op.child);
+			break;
+		}
+
+		case NODE_ID: {
+			if(node->id_name) free(node->id_name);
+			break;
+		}
+
+		case NODE_NUMBER:
+		case NODE_BOOL:
+			// Nothing extra to free
+			break;
+
+		default:
+			// Unknown type; maybe log a warning
+			fprintf(stderr, "Warning: freeing unknown ASTNode type %d\n", node->type);
+			break;
+
+	}
+
+	free(node);
+
 }
