@@ -94,7 +94,7 @@ void print_line_linkedlist(line_linkedlist* list, int prof);
 void print_DLL(DLL* dll, int prof, int pre);
 //void print_AST_formula(ASTNode* node);
 
-ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement);
+ASTNode* substitute(const ASTNode* node, const char* id, const ASTNode* repl);
 ASTNode* clone_node(const ASTNode* orig);
 
 

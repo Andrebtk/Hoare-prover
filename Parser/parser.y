@@ -15,7 +15,7 @@
 
 	void yyerror(const char *s);
 	int yylex(void);
-
+	extern int yylex_destroy(void);
 	//int yydebug = 1;
 
 %}
@@ -97,6 +97,7 @@ statement:
 
  	IDENTIFIER ASSIGN expr SEMICOLON											{ 
 		$$ = create_node_assign($1, $3);
+		free($1);
 	}
 
 	| IF LPAREN condition RPAREN block ELSE block								{ 
@@ -148,7 +149,7 @@ condition:
 
 expr:
       NUMBER                { $$ = create_node_number($1); }
-    | IDENTIFIER            { $$ = create_node_id($1); }
+    | IDENTIFIER            { $$ = create_node_id($1); free($1);}
     | expr PLUS expr        { $$ = create_node_binary("+", $1, $3); }
     | expr MINUS expr       { $$ = create_node_binary("-", $1, $3); }
     | expr MUL expr         { $$ = create_node_binary("*", $1, $3); }
@@ -188,8 +189,10 @@ void init_z3_functions(Z3_context ctx) {
 }
 
 int main() {
-
+	
 	printf("Start parsing...\n");
+
+	
     
 	
 	//yydebug = 1;
@@ -203,6 +206,9 @@ int main() {
 		return -1;
     }
 
+
+	yylex_destroy();
+
 	printf("Starting verify:\n");
 	
 	if (is_node_true(root->pre)) {
@@ -211,10 +217,12 @@ int main() {
 		return 1;
 	}
 
-
+	
 	ASTNode* result = hoare_prover(root, root->pre, root->post);
-	ASTNode* vc = create_node_binary("->", clone_node(root->pre), result);
 
+	ASTNode* vc = create_node_binary("->", clone_node(root->pre), result);
+	
+	
 	// --------- Here comes Z3 verification ---------
 	// Create context and solver
 	Z3_config cfg = Z3_mk_config();
@@ -230,7 +238,7 @@ int main() {
 	Z3_solver_inc_ref(ctx, solver);
 
 	// Create var_cache hashmap for variable caching
-	HashMap* var_cache = create_HashMap(64);
+	HashMap* var_cache = create_HashMap(16);
 	//print_ASTNode(vc,-1,-1);
 	
 	
@@ -262,21 +270,22 @@ int main() {
 		printf("Z3 says: Unknown result.\n");
 	}
 
-	// Cleanup
+	// undo solver ref
+	Z3_solver_dec_ref(ctx, solver);
+
+	// free any ASTs you inc_ref'd
 	Z3_dec_ref(ctx, res);
 	Z3_dec_ref(ctx, not_vc);
 
+	// free any Z3 objects held in var_cache
 	free_hashmap_with_context(var_cache, ctx);
 
-	
-
-	Z3_solver_dec_ref(ctx, solver);
-	
+	// finally remove context (this frees most Z3 internals associated with ctx)
 	Z3_del_context(ctx);
 
 	free_ASTNode(vc);
 	free_DLL(root);
-	
+
 	printf("DONE\n");
 	return 0;
 

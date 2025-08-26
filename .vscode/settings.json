@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.y": "c",
-        "z3.h": "c"
+        "z3.h": "c",
+        "vector": "c"
     }
 }

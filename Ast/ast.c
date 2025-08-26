@@ -363,287 +363,256 @@ void print_DLL(DLL* dll, int prof, int pre) {
    
 }
 
+DLL* clone_DLL(const DLL* src) {
+    if (!src) return NULL;
+    DLL* out = (DLL*)malloc(sizeof(DLL));
+    if (!out) { perror("malloc"); exit(1); }
 
-ASTNode* clone_node(const ASTNode* orig) {
-	if (!orig) return NULL;
-	switch (orig->type) {
+    out->pre  = clone_node(src->pre);
+    out->post = clone_node(src->post);
+    out->first = out->last = NULL;
 
-		case NODE_ASSIGN: {
-			
-			ASTNode* expr = clone_node(orig->Assign.expr);
-			return create_node_assign(orig->Assign.id, expr);
-			break;
-		}
+    line_linkedlist* prev = NULL;
+    for (line_linkedlist* cur = src->first; cur; cur = cur->next) {
+        line_linkedlist* nln = (line_linkedlist*)malloc(sizeof(line_linkedlist));
+        if (!nln) { perror("malloc"); exit(1); }
+        nln->node = clone_node(cur->node);
+        nln->next = NULL;
+        nln->prec = prev;
+        if (prev) prev->next = nln;
+        else out->first = nln;
+        prev = nln;
+    }
+    out->last = prev;
+    return out;
+}
 
-		case NODE_BIN_OP: {
+ASTNode* clone_node(const ASTNode* src) {
+    if (!src) return NULL;
 
-			ASTNode* left = clone_node(orig->binary_op.left);
-			ASTNode* right = clone_node(orig->binary_op.right);
+    ASTNode* dst = alloc_node(src->type);
 
-			return create_node_binary(orig->binary_op.op, left, right);
-			break;
-		}
+    switch (src->type) {
+        case NODE_ASSIGN:
+            dst->Assign.id   = src->Assign.id ? strdup(src->Assign.id) : NULL;
+            dst->Assign.expr = clone_node(src->Assign.expr);
+            break;
 
-		case NODE_UNARY_OP: { 
-			return create_node_unary(
-				orig->unary_op.op,
-				clone_node(orig->unary_op.child)
-			);
-			break;
-		}
+        case NODE_FUNCTION:
+            dst->function.fname = src->function.fname ? strdup(src->function.fname) : NULL;
+            dst->function.arg1  = clone_node(src->function.arg1);
+            dst->function.arg2  = clone_node(src->function.arg2);
+            break;
 
-		case NODE_NUMBER: {
-			return create_node_number(orig->number);
+        case NODE_IF_ELSE:
+            dst->If.condition  = clone_node(src->If.condition);
+            dst->If.block_if   = clone_DLL(src->If.block_if);
+            dst->If.block_else = clone_DLL(src->If.block_else);
+            break;
 
-			break;
-		}
+        case NODE_WHILE:
+            dst->While.condition  = clone_node(src->While.condition);
+            dst->While.invariant  = clone_node(src->While.invariant);
+            dst->While.variant    = clone_node(src->While.variant);
+            dst->While.block_main = clone_DLL(src->While.block_main);
+            break;
 
-		case NODE_ID: {
-			return create_node_id(orig->id_name);
+        case NODE_BIN_OP:
+            dst->binary_op.op    = src->binary_op.op ? strdup(src->binary_op.op) : NULL;
+            dst->binary_op.left  = clone_node(src->binary_op.left);
+            dst->binary_op.right = clone_node(src->binary_op.right);
+            break;
 
-			break;
-		}
+        case NODE_UNARY_OP:
+            dst->unary_op.op    = src->unary_op.op ? strdup(src->unary_op.op) : NULL;
+            dst->unary_op.child = clone_node(src->unary_op.child);
+            break;
 
-		case NODE_FUNCTION: {
-			return create_node_Func(
-				orig->function.fname,
-				clone_node(orig->function.arg1),
-				clone_node(orig->function.arg2)
-			);
+        case NODE_ID:
+            dst->id_name = src->id_name ? strdup(src->id_name) : NULL;
+            break;
 
-			break;
-		}
+        case NODE_NUMBER:
+            dst->number = src->number;
+            break;
 
-		case NODE_BOOL: {
-			return create_node_bool(orig->bool_value);
-		}
+        case NODE_BOOL:
+            dst->bool_value = src->bool_value;
+            break;
 
-		case NODE_IF_ELSE: {
-			// Clone the “then” block
-			DLL* then_copy = create_DLL();
-			for (line_linkedlist* it = orig->If.block_if->first; it; it = it->next) {
-				DLL_append(then_copy, clone_node(it->node));
-			}
-			// Clone the “else” block
-			DLL* else_copy = create_DLL();
-			for (line_linkedlist* it = orig->If.block_else->first; it; it = it->next) {
-				DLL_append(else_copy, clone_node(it->node));
-			}
-			return create_node_If_Else(
-				clone_node(orig->If.condition),
-				then_copy,
-				else_copy
-			);
+        default:
+            fprintf(stderr, "clone_node: unknown type %d\n", src->type);
+            break;
+    }
 
-			break;
+    return dst;
+}
+
+DLL* substitute_DLL(const DLL* src, const char* id, const ASTNode* repl) {
+    if (!src) return NULL;
+    DLL* out = (DLL*)malloc(sizeof(DLL));
+    if (!out) { perror("malloc"); exit(1); }
+
+    out->pre  = substitute(src->pre, id, repl);
+    out->post = substitute(src->post, id, repl);
+    out->first = out->last = NULL;
+
+    line_linkedlist* prev = NULL;
+    for (line_linkedlist* cur = src->first; cur; cur = cur->next) {
+        line_linkedlist* nln = (line_linkedlist*)malloc(sizeof(line_linkedlist));
+        if (!nln) { perror("malloc"); exit(1); }
+
+        nln->node = substitute(cur->node, id, repl);
+        nln->next = NULL;
+        nln->prec = prev;
+        if (prev) prev->next = nln;
+        else out->first = nln;
+        prev = nln;
+    }
+    out->last = prev;
+    return out;
+}
+
+
+
+ASTNode* substitute(const ASTNode* node, const char* id, const ASTNode* repl) {
+    if (!node) return NULL;
+    if (!id) return clone_node(node);
+
+    switch (node->type) {
+        case NODE_ID:
+            if (node->id_name && strcmp(node->id_name, id) == 0)
+                return clone_node(repl);
+            else
+                return clone_node(node);
+
+        case NODE_NUMBER:
+        case NODE_BOOL:
+            return clone_node(node);
+
+        case NODE_ASSIGN: {
+            ASTNode* out = alloc_node(NODE_ASSIGN);
+            out->Assign.id   = node->Assign.id ? strdup(node->Assign.id) : NULL;
+            out->Assign.expr = substitute(node->Assign.expr, id, repl);
+            return out;
+        }
+
+        case NODE_FUNCTION: {
+            ASTNode* out = alloc_node(NODE_FUNCTION);
+            out->function.fname = node->function.fname ? strdup(node->function.fname) : NULL;
+            out->function.arg1  = substitute(node->function.arg1, id, repl);
+            out->function.arg2  = substitute(node->function.arg2, id, repl);
+            return out;
+        }
+
+        case NODE_BIN_OP: {
+            ASTNode* out = alloc_node(NODE_BIN_OP);
+            out->binary_op.op    = node->binary_op.op ? strdup(node->binary_op.op) : NULL;
+            out->binary_op.left  = substitute(node->binary_op.left, id, repl);
+            out->binary_op.right = substitute(node->binary_op.right, id, repl);
+            return out;
+        }
+
+        case NODE_UNARY_OP: {
+            ASTNode* out = alloc_node(NODE_UNARY_OP);
+            out->unary_op.op    = node->unary_op.op ? strdup(node->unary_op.op) : NULL;
+            out->unary_op.child = substitute(node->unary_op.child, id, repl);
+            return out;
+        }
+
+       case NODE_IF_ELSE: {
+			ASTNode* out = alloc_node(NODE_IF_ELSE);
+			out->If.condition  = substitute(node->If.condition, id, repl);
+
+			// Substitue récursivement dans les DLL
+			out->If.block_if   = node->If.block_if   ? substitute_DLL(node->If.block_if, id, repl) : NULL;
+			out->If.block_else = node->If.block_else ? substitute_DLL(node->If.block_else, id, repl) : NULL;
+			return out;
 		}
 
 		case NODE_WHILE: {
-			
-			DLL* body_copy = create_DLL();
-			for (line_linkedlist* it = orig->While.block_main->first; it; it = it->next) {
-				DLL_append(body_copy, clone_node(it->node));
-			}
-			return create_node_While(
-				clone_node(orig->While.condition),
-				body_copy,
-				clone_node(orig->While.invariant),
-				clone_node(orig->While.variant)
-			);
-			
-			break;
+			ASTNode* out = alloc_node(NODE_WHILE);
+			out->While.condition  = substitute(node->While.condition, id, repl);
+			out->While.invariant  = substitute(node->While.invariant, id, repl);
+			out->While.variant    = substitute(node->While.variant, id, repl);
+			out->While.block_main = node->While.block_main ? substitute_DLL(node->While.block_main, id, repl) : NULL;
+			return out;
 		}
-	}
+
+        default:
+            return clone_node(node);
+    }
 }
-
-
-ASTNode* substitute(ASTNode* formula, const char* var, ASTNode* replacement) {
-	if (formula == NULL) return NULL;
-
-	ASTNode* new_node = NULL;
-
-	switch (formula->type) {
-		case NODE_ASSIGN: {
-
-			ASTNode* new_expr = substitute(formula->Assign.expr, var, replacement);
-			new_node = create_node_assign(formula->Assign.id, new_expr);
-			break;
-		}
-
-
-		case NODE_BIN_OP: {
-
-			ASTNode* left = substitute(formula->binary_op.left, var, replacement);
-			ASTNode* right = substitute(formula->binary_op.right, var, replacement);
-			new_node = create_node_binary(formula->binary_op.op, left, right);
-
-			break;
-		}
-
-
-		case NODE_IF_ELSE: {
-			// Substitute in the condition
-			ASTNode* new_condition = substitute(formula->If.condition, var, replacement);
-
-			// Substitute in the "then" block
-			DLL* new_block_if = create_DLL();
-			for (line_linkedlist* it = formula->If.block_if->first; it != NULL; it = it->next) {
-				ASTNode* new_node = substitute(it->node, var, replacement);
-				DLL_append(new_block_if, new_node);
-			}
-
-			// Substitute in the "else" block
-			DLL* new_block_else = create_DLL();
-			for (line_linkedlist* it = formula->If.block_else->first; it != NULL; it = it->next) {
-				ASTNode* new_node = substitute(it->node, var, replacement);
-				DLL_append(new_block_else, new_node);
-			}
-
-			new_node = create_node_If_Else(new_condition, new_block_if, new_block_else);
-			break;
-		}
-
-
-		case NODE_WHILE: {
-			ASTNode* new_condition = substitute(formula->While.condition, var, replacement);
-			ASTNode* new_invariant = substitute(formula->While.invariant, var, replacement);
-			ASTNode* new_variant = substitute(formula->While.variant, var, replacement);
-			
-			// Substitute in the DLL block_main: create a new DLL with substituted statements
-			DLL* new_block = create_DLL();
-			line_linkedlist* cur = formula->While.block_main->first;
-			while (cur != NULL) {
-				ASTNode* new_node = substitute(cur->node, var, replacement);
-				DLL_append(new_block, new_node);
-				cur = cur->next;
-			}
-			
-			new_node =  create_node_While(new_condition, new_block, new_invariant, new_variant);
-			break;
-		}
-
-
-		case NODE_NUMBER: {
-			new_node = create_node_number(formula->number);
-			break;
-		}
-
-		case NODE_ID: {
-			if(strcmp(formula->id_name, var) == 0) {
-				new_node = clone_node(replacement);
-			}
-			else {
-				new_node =  create_node_id(formula->id_name);
-			}
-			break;
-		}
-
-		case NODE_FUNCTION: {
-			// Substitute in the function's arguments
-			ASTNode* new_arg1 = substitute(formula->function.arg1, var, replacement);
-			ASTNode* new_arg2 = substitute(formula->function.arg2, var, replacement);
-			new_node =  create_node_Func(formula->function.fname, new_arg1, new_arg2);
-			break;
-		}
-
-		case NODE_UNARY_OP: {
-			// Substitute in the child subtree
-			ASTNode* new_child = substitute(formula->unary_op.child, var, replacement);
-			new_node =  create_node_unary(formula->unary_op.op, new_child);
-			break;
-		}
-
-		
-
-	}
-	//free_ASTNode(formula);
-	return new_node;
-}
-
-
-void free_ll(line_linkedlist* l) {
-	while(l) {
-		line_linkedlist* next = l->next;
-		free_ASTNode(l->node);
-		free(l);
-		l = next;
-	}
-}
-
-
-void free_DLL(DLL* l) {
-	if(l==NULL) return;
-
-	free_ASTNode(l->pre);
-	free_ASTNode(l->post);
-
-	free_ll(l->first);
-	free(l);
-}
-
 
 void free_ASTNode(ASTNode* node) {
-	if (node == NULL) return ;
+    if (!node) return;
 
-	switch (node->type) {
-		case NODE_ASSIGN: {
-			if(node->Assign.id) free(node->Assign.id);
-			if(node->Assign.expr) free_ASTNode(node->Assign.expr);
-			break;
-		}
+    switch (node->type) {
+        case NODE_ASSIGN:
+            free(node->Assign.id);
+            free_ASTNode(node->Assign.expr);
+            break;
 
-		case NODE_FUNCTION: {
-			if(node->function.fname) free(node->function.fname);
-			if(node->function.arg1) free_ASTNode(node->function.arg1);
-			if(node->function.arg2) free_ASTNode(node->function.arg2);
-			break;
-		}
+        case NODE_FUNCTION:
+            free(node->function.fname);
+            free_ASTNode(node->function.arg1);
+            free_ASTNode(node->function.arg2);
+            break;
 
-		case NODE_IF_ELSE: {
-			if(node->If.condition) free_ASTNode(node->If.condition);
-			if(node->If.block_if) free_DLL(node->If.block_if);
-			if(node->If.block_else) free_DLL(node->If.block_else);  // Check for NULL
-			break;
-		}
+        case NODE_IF_ELSE:
+            free_ASTNode(node->If.condition);
+            free_DLL(node->If.block_if);
+            free_DLL(node->If.block_else);
+            break;
 
-		case NODE_WHILE: {
-			if(node->While.condition) free_ASTNode(node->While.condition);
-			if(node->While.invariant) free_ASTNode(node->While.invariant);
-			if(node->While.variant) free_ASTNode(node->While.variant);
-			if(node->While.block_main) free_DLL(node->While.block_main);
-			break;
-		}
+        case NODE_WHILE:
+            free_ASTNode(node->While.condition);
+            free_ASTNode(node->While.invariant);
+            free_ASTNode(node->While.variant);
+            free_DLL(node->While.block_main);
+            break;
 
-		case NODE_BIN_OP: {
-			if(node->binary_op.op) free(node->binary_op.op);
-			if(node->binary_op.left) free_ASTNode(node->binary_op.left);
-			if(node->binary_op.right) free_ASTNode(node->binary_op.right);
-			break;
-		}
+        case NODE_BIN_OP:
+            free(node->binary_op.op);
+            free_ASTNode(node->binary_op.left);
+            free_ASTNode(node->binary_op.right);
+            break;
 
-		case NODE_UNARY_OP: {
-			if(node->unary_op.op) free(node->unary_op.op);
-			if(node->unary_op.child) free_ASTNode(node->unary_op.child);
-			break;
-		}
+        case NODE_UNARY_OP:
+            free(node->unary_op.op);
+            free_ASTNode(node->unary_op.child);
+            break;
 
-		case NODE_ID: {
-			if(node->id_name) free(node->id_name);
-			break;
-		}
+        case NODE_ID:
+            free(node->id_name);
+            break;
 
-		case NODE_NUMBER:
-		case NODE_BOOL:
-			// Nothing extra to free
-			break;
+        case NODE_NUMBER:
+        case NODE_BOOL:
+            break;
 
-		default:
-			// Unknown type; maybe log a warning
-			fprintf(stderr, "Warning: freeing unknown ASTNode type %d\n", node->type);
-			break;
+        default:
+            fprintf(stderr, "Warning: freeing unknown ASTNode type %d\n", node->type);
+            break;
+    }
 
-	}
-
-	free(node);
-
+    free(node);
 }
+
+void free_ll(line_linkedlist* l) {
+    while (l) {
+        line_linkedlist* next = l->next;
+        free_ASTNode(l->node); // frees the ASTNode
+        free(l);
+        l = next;
+    }
+}
+
+void free_DLL(DLL* dll) {
+    if (!dll) return;
+    free_ASTNode(dll->pre);
+    free_ASTNode(dll->post);
+    free_ll(dll->first); // safely frees all nodes in DLL
+    free(dll);
+}
+

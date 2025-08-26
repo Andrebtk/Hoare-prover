@@ -23,27 +23,27 @@ int is_node_true(ASTNode* node) {
 
 
 ASTNode* hoare_prover(DLL* code, ASTNode* pre, ASTNode* post) {
+    if (!code || !post) {
+        fprintf(stderr, RED "NULL input to hoare_prover\n" RESET);
+        return NULL;
+    }
 
-	if (!code || !post) {
-		fprintf(stderr, RED "NULL input to hoare_prover\n" RESET);
-		return NULL;
-	}
+    line_linkedlist *current = code->last;
+    /* hoare_prover takes ownership of 'post' */
+    ASTNode* wp = post;
 
-	line_linkedlist *current = code->last;
-	ASTNode* wp = post;
+    while (current != NULL) {
+        ASTNode* new_wp = hoare_statement(current->node, wp);
+        /* hoare_statement is expected to return a NEW node (the new wp)
+           and not depend on 'wp' after return, so we free the old wp here. */
+        free_ASTNode(wp);
+        wp = new_wp;
+        current = current->prec;
+    }
 
-	while( current != NULL ) {
-		ASTNode* wp_clone = clone_node(wp);
-		ASTNode* new_wp   = hoare_statement(current->node, wp_clone);
-		// optionally free(wp_clone) if you don't need the old tree any more
-		free_ASTNode(wp_clone); 
-
-		wp = new_wp;
-		current = current->prec;
-	}
-
-	return wp;
+    return wp; /* caller must free the returned wp when done */
 }
+
 
 
 
@@ -73,38 +73,45 @@ ASTNode* hoare_statement(ASTNode* node, ASTNode* post) {
 }
 
 ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post ) {
-	return substitute(post, 
-						node->Assign.id, 
-						node->Assign.expr);
+	ASTNode* post_clone = clone_node(post);
+	ASTNode* result = substitute(post_clone, node->Assign.id, node->Assign.expr);
+	free_ASTNode(post_clone); // free the clone, safe
+	return result;
 }
+
 
 
 /*
 	{P} if B then { C1 } else { C2 } {Q}
 */
 ASTNode* hoare_IfElseRule(ASTNode* node_IfElse, ASTNode* post) {
-
 	if (!node_IfElse || node_IfElse->type != NODE_IF_ELSE) {
 		fprintf(stderr, "Invalid node in hoare_IfElseRule\n");
 		return NULL;
 	}
 
-	
 	ASTNode* condition = node_IfElse->If.condition;	// B
 	DLL* block_if = node_IfElse->If.block_if;		// C1
-	DLL* block_else = node_IfElse->If.block_else;		// C2
+	DLL* block_else = node_IfElse->If.block_else;	// C2 (can be NULL)
 
-	if (!condition || !block_if || !block_else) {
-		fprintf(stderr, RED "Incomplete IF node\n" RESET);
+	if (!condition || !block_if) {
+		fprintf(stderr, RED "Incomplete IF node (missing condition or if-block)\n" RESET);
 		return NULL;
 	}
 
 	// Clone post for separate branches
 	ASTNode* post_clone_if = clone_node(post);
-	ASTNode* post_clone_else = clone_node(post);
-
 	ASTNode* wp_if = hoare_prover(block_if, NULL, post_clone_if);
-	ASTNode* wp_else = hoare_prover(block_else, NULL, post_clone_else);
+
+	ASTNode* wp_else;
+	if (block_else && block_else->first) {
+		// There is an else block
+		ASTNode* post_clone_else = clone_node(post);
+		wp_else = hoare_prover(block_else, NULL, post_clone_else);
+	} else {
+		// No else block - the postcondition should hold directly
+		wp_else = clone_node(post);
+	}
 
 	// Build implication nodes
 	ASTNode* left = create_node_binary("->", clone_node(condition), wp_if);
