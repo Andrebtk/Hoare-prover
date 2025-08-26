@@ -13,7 +13,8 @@ typedef struct DLL_ DLL;
 
 typedef struct ASTNode_ {
 	NodeType type;
-	
+	int freed;
+
 	union {
 		struct {
 			char* id;

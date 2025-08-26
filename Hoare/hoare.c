@@ -79,8 +79,6 @@ ASTNode* hoare_AssignmentRule(ASTNode* node, ASTNode* post ) {
 	return result;
 }
 
-
-
 /*
 	{P} if B then { C1 } else { C2 } {Q}
 */

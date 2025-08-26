@@ -285,6 +285,7 @@ int main() {
 
 	free_ASTNode(vc);
 	free_DLL(root);
+	Z3_finalize_memory();
 
 	printf("DONE\n");
 	return 0;

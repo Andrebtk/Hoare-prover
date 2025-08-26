@@ -7,6 +7,7 @@ ASTNode* alloc_node(NodeType type) {
     if (!node) return NULL;
     memset(node, 0, sizeof(ASTNode));
     node->type = type;
+	node->freed = 0;
     return node;
 }
 
@@ -545,9 +546,11 @@ ASTNode* substitute(const ASTNode* node, const char* id, const ASTNode* repl) {
 }
 
 void free_ASTNode(ASTNode* node) {
-    if (!node) return;
+	if (!node || node->freed) return;
 
-    switch (node->type) {
+    node->freed = 1;
+    
+	switch (node->type) {
         case NODE_ASSIGN:
             free(node->Assign.id);
             free_ASTNode(node->Assign.expr);
@@ -608,11 +611,23 @@ void free_ll(line_linkedlist* l) {
     }
 }
 
+
 void free_DLL(DLL* dll) {
     if (!dll) return;
+
     free_ASTNode(dll->pre);
     free_ASTNode(dll->post);
-    free_ll(dll->first); // safely frees all nodes in DLL
+
+    line_linkedlist* current = dll->first;
+    while (current) {
+        line_linkedlist* next = current->next;
+        // free_ASTNode will check node->freed, so it's safe
+        free_ASTNode(current->node);
+        free(current);
+        current = next;
+    }
+
     free(dll);
 }
+
 
