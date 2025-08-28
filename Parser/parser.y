@@ -1,6 +1,4 @@
 %{ 
-	/* C declarations: includes, helper functions, variables */
-
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include <string.h>
@@ -20,7 +18,6 @@
 
 %}
 
-/* Declare tokens here */
 %union {
 	int num;
 	char *id;
@@ -35,26 +32,19 @@
 %token GE LE
 %token PRECOND POSTCOND 
 %token MOD
-
-
-
-
 %token TRUE FALSE
-
 %token MIN MAX FACT
 %token COMMA
 %token IMPLY
+%token ASSIGN
+%token EQ
+%token NEQ
+%token NOT
 
 %token <id> IDENTIFIER 
 %token <num> NUMBER 
-
 %type <node> statement expr condition precond postcond
 %type <dll> block statements
-
-%token ASSIGN    // '='
-%token EQ        // '=='
-%token NEQ       // '!='
-%token NOT
 
 %right IMPLY
 %left OR
@@ -66,110 +56,103 @@
 %right ASSIGN
 
 
-
-
 %%
 /* Grammar rules and actions */
 program:
 	statements precond postcond {
-		
 		root = $1;
 		root->pre = $2;
 		root->post = $3;
 	}
-	;
+;
 
 precond: 
 	PRECOND condition {
 		$$ = $2;
 		
 	}
-	;
+;
 
 postcond:
 	POSTCOND condition {
 		$$ = $2;
 	}
-	;
+;
 
 
 statement:
-
- 	IDENTIFIER ASSIGN expr SEMICOLON											{ 
+ 	IDENTIFIER ASSIGN expr SEMICOLON { 
 		$$ = create_node_assign($1, $3);
 		free($1);
 	}
 
-	| IF LPAREN condition RPAREN block ELSE block								{ 
+	| IF LPAREN condition RPAREN block ELSE block { 
 		$$ = create_node_If_Else($3, $5, $7);
 	}
 
-	| IF LPAREN condition RPAREN block 											{
-		$$ = create_node_If_Else($3, $5, NULL); // Handle if without else
+	| IF LPAREN condition RPAREN block {
+		$$ = create_node_If_Else($3, $5, NULL);
 	}
 
 	| WHILE LPAREN condition RPAREN INVARIANT LPAREN condition RPAREN VARIANT LPAREN expr RPAREN block 	{ 
 		$$ = create_node_While($3, $13, $7, $11);
 	}
-
-	
-	
-	;
+;
 
 statements:
-	  							{
+						{
+		// Base case: an empty "statements" rule
+		// -> when there are no statements, create a new (empty) DLL to hold them
 		$$ = create_DLL(); 
-	  }
+    }
 	| statements statement		{ 
+		// Recursive case: we already have a list of statements ($1)
+		// Append the new "statement" ($2) to that list
 		DLL_append($1, $2); 
 		$$ = $1;
 	}
-	;
+;
 
 block:
-	LBRACE statements RBRACE { $$ = $2; }
-	;
+	LBRACE statements RBRACE { 
+		$$ = $2; 
+	}
+;
 
 condition:
-      expr LT expr          { $$ = create_node_binary("<", $1, $3); }
-    | expr GT expr          { $$ = create_node_binary(">", $1, $3); }
-	| expr GE expr          { $$ = create_node_binary(">=", $1, $3); }
-	| expr LE expr          { $$ = create_node_binary("<=", $1, $3); }
-    | expr EQ expr          { $$ = create_node_binary("==", $1, $3); }
-    | expr NEQ expr         { $$ = create_node_binary("!=", $1, $3); }
-	| TRUE                  { $$ = create_node_bool(1); }
-    | FALSE                 { $$ = create_node_bool(0); }
-    | condition AND condition { $$ = create_node_binary("and", $1, $3); }
-    | condition OR condition  { $$ = create_node_binary("or", $1, $3); }
-    | NOT condition         { $$ = create_node_unary("not", $2); }
-    | LPAREN condition RPAREN { $$ = $2; }
-    | condition IMPLY condition { $$ = create_node_binary("->", $1, $3); }
-	| expr                  { $$ = $1; }
-    ;
+	  expr LT expr					{ $$ = create_node_binary("<", $1, $3); }
+	| expr GT expr					{ $$ = create_node_binary(">", $1, $3); }
+	| expr GE expr					{ $$ = create_node_binary(">=", $1, $3); }
+	| expr LE expr					{ $$ = create_node_binary("<=", $1, $3); }
+	| expr EQ expr					{ $$ = create_node_binary("==", $1, $3); }
+	| expr NEQ expr					{ $$ = create_node_binary("!=", $1, $3); }
+	| TRUE							{ $$ = create_node_bool(1); }
+	| FALSE							{ $$ = create_node_bool(0); }
+	| condition AND condition		{ $$ = create_node_binary("and", $1, $3); }
+	| condition OR condition		{ $$ = create_node_binary("or", $1, $3); }
+	| NOT condition					{ $$ = create_node_unary("not", $2); }
+	| LPAREN condition RPAREN		{ $$ = $2; }
+	| condition IMPLY condition		{ $$ = create_node_binary("->", $1, $3); }
+	| expr							{ $$ = $1; }
+;
 
 expr:
-      NUMBER                { $$ = create_node_number($1); }
-    | IDENTIFIER            { $$ = create_node_id($1); free($1);}
-    | expr PLUS expr        { $$ = create_node_binary("+", $1, $3); }
-    | expr MINUS expr       { $$ = create_node_binary("-", $1, $3); }
-    | expr MUL expr         { $$ = create_node_binary("*", $1, $3); }
-    | expr DIV expr         { $$ = create_node_binary("/", $1, $3); }
-	| expr MOD expr 		{ $$ = create_node_binary("%", $1, $3); }
-    | LPAREN expr RPAREN    { $$ = $2; }
-    | MIN LPAREN expr COMMA expr RPAREN {
-        $$ = create_node_Func("min", $3, $5);
-    }
-    | MAX LPAREN expr COMMA expr RPAREN {
-        $$ = create_node_Func("max", $3, $5);
-    }
-	| FACT LPAREN expr RPAREN {
-		$$ = create_node_Func("fact", $3, NULL);
-	}
-    ;
+	  NUMBER								{ $$ = create_node_number($1); }
+	| IDENTIFIER							{ $$ = create_node_id($1); free($1);}
+	| expr PLUS expr						{ $$ = create_node_binary("+", $1, $3); }
+	| expr MINUS expr						{ $$ = create_node_binary("-", $1, $3); }
+	| expr MUL expr							{ $$ = create_node_binary("*", $1, $3); }
+	| expr DIV expr							{ $$ = create_node_binary("/", $1, $3); }
+	| expr MOD expr							{ $$ = create_node_binary("%", $1, $3); }
+	| LPAREN expr RPAREN 					{ $$ = $2; }
+	| MIN LPAREN expr COMMA expr RPAREN		{ $$ = create_node_Func("min", $3, $5); }
+	| MAX LPAREN expr COMMA expr RPAREN		{ $$ = create_node_Func("max", $3, $5); }
+	| FACT LPAREN expr RPAREN				{ $$ = create_node_Func("fact", $3, NULL); }
+;
 
 %%
-
 /* Additional C code (functions, main, helpers) */
+
 void yyerror(const char *s) {
 	fprintf(stderr, "Parse error: %s\n", s);
 }
@@ -177,96 +160,106 @@ void yyerror(const char *s) {
 Z3_func_decl fact_func;
 
 
-void init_z3_functions(Z3_context ctx) {
-    Z3_sort int_sort = Z3_mk_int_sort(ctx);
 
-    Z3_symbol fact_sym = Z3_mk_string_symbol(ctx, "fact");
-
-    // La fonction fact prend 1 argument de type int, retourne int
-    Z3_sort domain[] = { int_sort };
-
-    fact_func = Z3_mk_func_decl(ctx, fact_sym, 1, domain, int_sort);
-}
 int main() {
-    printf("Start parsing...\n");
+	printf("Start parsing...\n");
 
-    // Parse the input
-    if (yyparse() == 0) {
-        printf("Parsing done.\n");
-        // root now points to your DLL with all statements
-        // print_DLL(root, 0, 0);
-    } else {
-        printf("Parsing failed.\n");
-        return -1;
-    }
 
-    yylex_destroy();
+	// ----------------------------
+	// Parse input program
+	// ----------------------------
+	if (yyparse() == 0) {
+		printf("Parsing done.\n"); // root now points to your DLL with all statements
+	} else {
+		printf("Parsing failed.\n");
+		return -1;
+	}
 
-    printf("Starting verify:\n");
+	// Free lexer state after parsing
+	yylex_destroy();
 
-    if (is_node_true(root->pre)) {
-        printf(RED "ERROR ->\"PRECONDITION: true\" is not yet supported\n" RESET);
-        free_DLL(root); // free DLL and contained ASTNodes
-        return 1;
-    }
+	
+	printf("Starting verification...\n");
 
-    // Hoare prover: result is a new ASTNode, caller owns it
-    ASTNode* result = hoare_prover(root, root->pre, root->post);
+	
+	// ----------------------------
+	// Sanity check: reject pre = true (unsupported)
+	// ----------------------------
+	if (is_node_true(root->pre)) {
+		printf(RED "ERROR -> \"PRECONDITION: true\" is not supported\n" RESET);
+		free_DLL(root);  // cleanup AST
+		return 1;
+	}
 
-    // Create verification condition VC (new ASTNode, caller owns it)
-    ASTNode* vc = create_node_binary("->", clone_node(root->pre), clone_node(result));
+	// ----------------------------
+	// Generate verification condition (VC) from program
+	// ----------------------------
+	ASTNode* result = hoare_prover(root, root->pre, root->post);
+	ASTNode* vc = create_node_binary("->", clone_node(root->pre), clone_node(result));
 
-    // --------- Z3 verification ---------
-    Z3_config cfg = Z3_mk_config();
-    Z3_context ctx = Z3_mk_context(cfg);
-    Z3_del_config(cfg);
+	// ----------------------------
+	// Setup Z3 solver
+	// ----------------------------
+	Z3_config cfg = Z3_mk_config();
+	Z3_context ctx = Z3_mk_context(cfg);
+	Z3_del_config(cfg);
 
-    init_z3_functions(ctx);
-    init_z3(ctx);
+	init_z3(ctx); // user-defined funcs like fact
 
-    Z3_solver solver = Z3_mk_solver(ctx);
-    Z3_solver_inc_ref(ctx, solver);
+	Z3_solver solver = Z3_mk_solver(ctx);
+	Z3_solver_inc_ref(ctx, solver);
 
-    HashMap* var_cache = create_HashMap(16);
 
-    Z3_ast res = ast_to_z3(ctx, vc, var_cache);
-    Z3_inc_ref(ctx, res);
+	// Cache for variables (so we reuse Z3 symbols consistently)
+	HashMap* var_cache = create_HashMap(16);
 
-    Z3_ast not_vc = Z3_mk_not(ctx, res);
-    Z3_inc_ref(ctx, not_vc);
 
-    Z3_solver_assert(ctx, solver, not_vc);
+	// ----------------------------
+	// Translate VC into Z3 formula
+	// ----------------------------
+	Z3_ast res = ast_to_z3(ctx, vc, var_cache);
+	Z3_inc_ref(ctx, res);
 
-    Z3_lbool z3_result = Z3_solver_check(ctx, solver);
-    if (z3_result == Z3_L_FALSE) {
-        printf(GREEN "Z3 says: The program is correct!\n" RESET);
-    } else if (z3_result == Z3_L_TRUE) {
-        printf(RED "Z3 says: The program is NOT correct!\n" RESET);
-        Z3_model model = Z3_solver_get_model(ctx, solver);
-        Z3_model_inc_ref(ctx, model);
-        // inspect model if needed
-        Z3_model_dec_ref(ctx, model);
-    } else {
-        printf("Z3 says: Unknown result.\n");
-    }
+	// Build ¬VC (negation of VC)
+	Z3_ast not_vc = Z3_mk_not(ctx, res);
+	Z3_inc_ref(ctx, not_vc);
 
-    printf("root=%p root->pre=%p root->post=%p vc=%p\n",
-           (void*)root, (void*)root->pre, (void*)root->post, (void*)vc);
+	// Assert ¬VC (to check validity)
+	
+	Z3_solver_assert(ctx, solver, not_vc); // add constraint not_vc to solver
 
-    // Cleanup Z3
-    Z3_solver_dec_ref(ctx, solver);
-    Z3_dec_ref(ctx, res);
-    Z3_dec_ref(ctx, not_vc);
-    free_hashmap_with_context(var_cache, ctx);
-    Z3_del_context(ctx);
+	// ----------------------------
+	// Check satisfiability
+	// ----------------------------
+	Z3_lbool z3_result = Z3_solver_check(ctx, solver); //Run the solver
+	
+	if (z3_result == Z3_L_FALSE) {
+		// UNSAT(¬VC) ⇒ VC is valid
+		printf(GREEN "Z3 says: The program is correct!\n" RESET);
+	} 
+	else if (z3_result == Z3_L_TRUE) {
+		 // SAT(¬VC) ⇒ counterexample exists
+		printf(RED "Z3 says: The program is NOT correct!\n" RESET);
+	} 
+	else {
+		printf("Z3 says: Unknown result.\n");
+	}
 
-    // Free ASTs
-    free_ASTNode(vc);
-    free_ASTNode(result); // result is freed here
-    free_DLL(root);       // safely frees DLL and contained ASTNodes
+	// ----------------------------
+	// Cleanup
+	// ----------------------------
+	Z3_solver_dec_ref(ctx, solver);
+	Z3_dec_ref(ctx, res);
+	Z3_dec_ref(ctx, not_vc);
+	free_hashmap_with_context(var_cache, ctx);
+	Z3_del_context(ctx);
 
-    Z3_finalize_memory();
+	// Free ASTs
+	free_ASTNode(vc);
+	free_ASTNode(result);
+	free_DLL(root);
 
-    printf("DONE\n");
-    return 0;
+	Z3_finalize_memory();
+
+	return 0;
 }

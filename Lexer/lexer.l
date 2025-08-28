@@ -2,7 +2,7 @@
 	#include <stdio.h>
 
 	#include "../Ast/ast.h"
-	#include "../Parser/parser.tab.h"  /* not parser.y */
+	#include "../Parser/parser.tab.h"
 
 %}
 
@@ -14,179 +14,97 @@
 	return NUMBER;
 }
 
-"min" {
-	return MIN;
-}
+"min" { return MIN; }
 
-"max" {
-	return MAX;
-}
+"max" { return MAX; }
 
+"fact" { return FACT; }
 
-"fact" {
-	return FACT;
-}
+"%" { return MOD; }
 
-"%"   { return MOD; }
+"->" { return IMPLY; }
 
-"->" {
-	return IMPLY;
-}
+"==" { return EQ; }
 
-"==" { 
-	return EQ;
-}
+"invariant" { return INVARIANT; }
 
-"invariant" {
-	return INVARIANT;
-}
+"INVARIANT" { return INVARIANT; }
 
-"INVARIANT" {
-	return INVARIANT;
-}
+"variant" { return VARIANT; }
 
-"variant" {
-	return VARIANT;
-}
+"VARIANT" { return VARIANT; }
 
-"VARIANT" {
-	return VARIANT;
-}
+"=" { return ASSIGN; }
 
+"," { return COMMA; }
 
-"=" { 
-	return ASSIGN;
-}
+"!=" { return NEQ; }
 
-"," {
-	return COMMA;
-}
+"+" { return PLUS; }
 
-"!=" { 
-	return NEQ;
-}
+"-" { return MINUS; }
 
-"+" { 
-	return PLUS;
-}
-
-"-" { 
-	return MINUS;
-}
-
-"*"						{ 
-	return MUL;
-}
+"*" { return MUL; }
 
 [ \t]+					;
 
 \n 						;
 
+"true" { return TRUE; }
+"false" { return FALSE; }
 
-"true"    return TRUE;
-"false"   return FALSE;
+"TRUE" { return TRUE; }
+"FALSE" { return FALSE; }
 
-"TRUE"    return TRUE;
-"FALSE"   return FALSE;
+";" { return SEMICOLON; }
 
-";" { 
-	return SEMICOLON;
-}
+"if" { return IF; }
 
-"if" {
-	return IF;
-}
+"else" { return ELSE; }
 
-"else" { 
-	return ELSE;
-}
+"while" { return WHILE; }
 
-"while" {
-	return WHILE;
-}
+"(" { return LPAREN; }
 
-"(" {
-	return LPAREN;
-}
+")" { return RPAREN; }
 
-")" {
-	return RPAREN;
-}
+"{" { return LBRACE; }
 
-"{" {
-	return LBRACE;
-}
+"}" { return RBRACE; }
 
-"}" {
-	return RBRACE;
-}
+"<" { return LT; }
 
-"<" {
-	return LT;
-}
+">" { return GT; }
 
-">" {
-	return GT;
-}
+"<=" { return LE; }
 
-"<=" {
-	return LE;
-}
+">=" { return GE; }
 
-">=" {
-	return GE;
-}
+"PRECONDITION:" { return PRECOND; }
 
-"PRECONDITION:" {
-	return PRECOND;
-}
+"POSTCONDITION:" { return POSTCOND; }
 
-"POSTCONDITION:" {
-	return POSTCOND;
-}
+"AND" { return AND; }
 
+"and" { return AND; }
 
-"AND" {
-	return AND;
-}
+"OR" { return OR; }
 
-"and" {
-	return AND;
-}
+"or" { return OR; }
 
-"OR" {
-	return OR;
-}
+"NOT" { return NOT; }
 
-"or" {
-	return OR;
-}
+"not" { return NOT; }
 
-"NOT" {
-	return NOT;
-}
-
-"not" {
-	return NOT;
-}
-
-"/"   { 
-	return DIV; 
-}
-
-
+"/"   { return DIV; }
 
 [a-zA-Z][a-zA-Z0-9]* { 
 	yylval.id = strdup(yytext);
 	return IDENTIFIER;
 }
 
-
-
 %%
-
 
 int yywrap() {
 	return 1;
 }
-

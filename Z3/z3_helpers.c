@@ -1,140 +1,173 @@
 #include "z3_helpers.h"
 #include <string.h>
 
+
+// ------------------------------------------------------------
+// Initialize recursive Z3 functions (here: factorial fact: Int -> Int)
+// ------------------------------------------------------------
 void init_z3(Z3_context ctx) {
-    Z3_sort int_sort = Z3_mk_int_sort(ctx);
-    Z3_symbol fact_name = Z3_mk_string_symbol(ctx, "fact");
+	Z3_sort int_sort = Z3_mk_int_sort(ctx); // integer sort
+	Z3_symbol fact_name = Z3_mk_string_symbol(ctx, "fact"); // symbol for "fact"
 
-    // Création de la fonction récursive fact: Int -> Int
-    fact_func = Z3_mk_rec_func_decl(ctx, fact_name, 1, &int_sort, int_sort);
+	// Create recursive function declaration fact : Int → Int
+	fact_func = Z3_mk_rec_func_decl(ctx, fact_name, 1, &int_sort, int_sort);
 
-    // Variable liée n (bound var)
-    Z3_ast n = Z3_mk_bound(ctx, 0, int_sort);
-    Z3_ast zero = Z3_mk_int(ctx, 0, int_sort);
-    Z3_ast one = Z3_mk_int(ctx, 1, int_sort);
-    Z3_ast n_minus_one = Z3_mk_sub(ctx, 2, (Z3_ast[]){n, one});
-    Z3_ast fact_n_minus_one = Z3_mk_app(ctx, fact_func, 1, &n_minus_one);
+	// Bound variable n (argument of fact)
+	Z3_ast n = Z3_mk_bound(ctx, 0, int_sort);
+	Z3_ast zero = Z3_mk_int(ctx, 0, int_sort);
+	Z3_ast one = Z3_mk_int(ctx, 1, int_sort);
+	
+	// Build n - 1
+	Z3_ast n_minus_one = Z3_mk_sub(ctx, 2, (Z3_ast[]){n, one});
 
-    // corps récursif : if n == 0 then 1 else n * fact(n-1)
-    Z3_ast body = Z3_mk_ite(ctx,
-                            Z3_mk_eq(ctx, n, zero),
-                            one,
-                            Z3_mk_mul(ctx, 2, (Z3_ast[]){n, fact_n_minus_one}));
+	// Recursive call fact(n-1)
+	Z3_ast fact_n_minus_one = Z3_mk_app(ctx, fact_func, 1, &n_minus_one);
 
-    // Ajout de la définition récursive
-    Z3_add_rec_def(ctx, fact_func, 1, &n, body);
+	// Define factorial body:
+	//   if n == 0 then 1 else n * fact(n-1)
+	Z3_ast body = Z3_mk_ite(ctx,
+							Z3_mk_eq(ctx, n, zero), // condition (n == 0)
+							one,					 // then branch
+							Z3_mk_mul(ctx, 2, (Z3_ast[]){n, fact_n_minus_one}));  // else branch
+
+	// Register the recursive definition with Z3
+	// Z3_add_rec_def(ctx, f, n, bound_vars[], body)
+	Z3_add_rec_def(ctx, fact_func, 1, &n, body);
 }
 
 
+// ------------------------------------------------------------
+// Translate custom ASTNode into Z3_ast
+// This recursively maps my AST into Z3 formulas/terms
+// ------------------------------------------------------------
 Z3_ast ast_to_z3(Z3_context ctx, ASTNode* node, HashMap* var_cache) {
-    if (!node) {
-        fprintf(stderr, "ast_to_z3: NULL node\n");
-        return NULL;
-    }
+	if (!node) {
+		fprintf(stderr, "ast_to_z3: NULL node\n");
+		return NULL;
+	}
 
-    // Type caches
-    static Z3_sort int_sort = NULL;
-    static Z3_sort bool_sort = NULL;
+	// Type caches (static: reused across calls)
+	static Z3_sort int_sort = NULL;
+	static Z3_sort bool_sort = NULL;
 
-    if (!int_sort) int_sort = Z3_mk_int_sort(ctx);
-    if (!bool_sort) bool_sort = Z3_mk_bool_sort(ctx);
+	if (!int_sort) int_sort = Z3_mk_int_sort(ctx);
+	if (!bool_sort) bool_sort = Z3_mk_bool_sort(ctx);
 
-    switch (node->type) {
-        case NODE_NUMBER: {
-            return Z3_mk_int(ctx, node->number, int_sort);
-        }
+	switch (node->type) {
 
-        case NODE_BOOL: {
-            return node->bool_value ? Z3_mk_true(ctx) : Z3_mk_false(ctx);
-        }
+		// ---------------- Number literal ----------------
+		case NODE_NUMBER: {
+			return Z3_mk_int(ctx, node->number, int_sort);
+		}
 
-        case NODE_ID: {
-            if (!var_cache) {
-                fprintf(stderr, "Error: var_cache is NULL\n");
-                return NULL;
-            }
+		// ---------------- Boolean literal ----------------
+		case NODE_BOOL: {
+			return node->bool_value ? Z3_mk_true(ctx) : Z3_mk_false(ctx);
+		}
 
-            int index = hash(var_cache, node->id_name);
-            HashEntry* entry = var_cache->table[index];
+		// ---------------- Identifier (variable) ----------------
+		case NODE_ID: {
+			if (!var_cache) {
+				fprintf(stderr, "Error: var_cache is NULL\n");
+				return NULL;
+			}
 
-            while (entry) {
-                if (strcmp(entry->key, node->id_name) == 0) {
-                    return (Z3_ast) entry->value;
-                }
-                entry = entry->next;
-            }
+			// Lookup variable in cache
+			int index = hash(var_cache, node->id_name);
+			HashEntry* entry = var_cache->table[index];
 
-            // Not found → create, store in hashmap
-            Z3_symbol sym = Z3_mk_string_symbol(ctx, node->id_name);
-            Z3_ast var = Z3_mk_const(ctx, sym, int_sort);
-            Z3_inc_ref(ctx, var);                // Important for later free
-            insert_HashMap(var_cache, node->id_name, var);
-            return var;
-        }
+			while (entry) {
+				if (strcmp(entry->key, node->id_name) == 0) {
+					return (Z3_ast) entry->value; // reuse existing symbol
+				}
+				entry = entry->next;
+			}
 
-        case NODE_BIN_OP: {
-            Z3_ast left = ast_to_z3(ctx, node->binary_op.left, var_cache);
-            Z3_ast right = ast_to_z3(ctx, node->binary_op.right, var_cache);
+			// Not found → create fresh Z3 constant and store it
+			Z3_symbol sym = Z3_mk_string_symbol(ctx, node->id_name);
+			Z3_ast var = Z3_mk_const(ctx, sym, int_sort);
+			Z3_inc_ref(ctx, var); // keep var alive until explicit free
+			insert_HashMap(var_cache, node->id_name, var);
+			return var;
+		}
 
-            if (!left || !right) {
-                fprintf(stderr, "ast_to_z3: NULL child in binary op\n");
-                return NULL;
-            }
+		// ---------------- Binary operator ----------------
+		case NODE_BIN_OP: {
+			Z3_ast left = ast_to_z3(ctx, node->binary_op.left, var_cache);
+			Z3_ast right = ast_to_z3(ctx, node->binary_op.right, var_cache);
 
-            Z3_ast args[2] = {left, right};
+			if (!left || !right) {
+				fprintf(stderr, "ast_to_z3: NULL child in binary op\n");
+				return NULL;
+			}
 
-            if (strcmp(node->binary_op.op, "+") == 0) return Z3_mk_add(ctx, 2, args);
-            if (strcmp(node->binary_op.op, "-") == 0) return Z3_mk_sub(ctx, 2, args);
-            if (strcmp(node->binary_op.op, "*") == 0) return Z3_mk_mul(ctx, 2, args);
-            if (strcmp(node->binary_op.op, "/") == 0) return Z3_mk_div(ctx, left, right);
-            if (strcmp(node->binary_op.op, "<") == 0) return Z3_mk_lt(ctx, left, right);
-            if (strcmp(node->binary_op.op, ">") == 0) return Z3_mk_gt(ctx, left, right);
-            if (strcmp(node->binary_op.op, "==") == 0) return Z3_mk_eq(ctx, left, right);
-            if (strcmp(node->binary_op.op, "!=") == 0) return Z3_mk_distinct(ctx, 2, args);
-            if (strcmp(node->binary_op.op, "and") == 0) return Z3_mk_and(ctx, 2, args);
-            if (strcmp(node->binary_op.op, "or") == 0) return Z3_mk_or(ctx, 2, args);
-            if (strcmp(node->binary_op.op, ">=") == 0) return Z3_mk_ge(ctx, left, right);
-            if (strcmp(node->binary_op.op, "<=") == 0) return Z3_mk_le(ctx, left, right);
-            if (strcmp(node->binary_op.op, "->") == 0) return Z3_mk_implies(ctx, left, right);
-            if (strcmp(node->binary_op.op, "%") == 0) return Z3_mk_mod(ctx, left, right);
+			Z3_ast args[2] = {left, right};
 
-            fprintf(stderr, "ast_to_z3: Unknown binary op '%s'\n", node->binary_op.op);
-            return NULL;
-        }
+			// Map operators to Z3 API
+			if (strcmp(node->binary_op.op, "+") == 0) return Z3_mk_add(ctx, 2, args);
+			if (strcmp(node->binary_op.op, "-") == 0) return Z3_mk_sub(ctx, 2, args);
+			if (strcmp(node->binary_op.op, "*") == 0) return Z3_mk_mul(ctx, 2, args);
+			if (strcmp(node->binary_op.op, "/") == 0) return Z3_mk_div(ctx, left, right);
+			if (strcmp(node->binary_op.op, "%") == 0) return Z3_mk_mod(ctx, left, right);
 
-        case NODE_UNARY_OP: {
-            Z3_ast child = ast_to_z3(ctx, node->unary_op.child, var_cache);
-            if (!child) {
-                fprintf(stderr, "ast_to_z3: NULL child in unary op\n");
-                return NULL;
-            }
-            if (strcmp(node->unary_op.op, "not") == 0) return Z3_mk_not(ctx, child);
+			if (strcmp(node->binary_op.op, "<") == 0) return Z3_mk_lt(ctx, left, right);
+			if (strcmp(node->binary_op.op, ">") == 0) return Z3_mk_gt(ctx, left, right);
+			if (strcmp(node->binary_op.op, ">=") == 0) return Z3_mk_ge(ctx, left, right);
+			if (strcmp(node->binary_op.op, "<=") == 0) return Z3_mk_le(ctx, left, right);
 
-            fprintf(stderr, "ast_to_z3: Unknown unary op '%s'\n", node->unary_op.op);
-            return NULL;
-        }
+			if (strcmp(node->binary_op.op, "==") == 0) return Z3_mk_eq(ctx, left, right);
+			if (strcmp(node->binary_op.op, "!=") == 0) return Z3_mk_distinct(ctx, 2, args);
 
-        case NODE_FUNCTION: {
-            if (strcmp(node->function.fname, "fact") == 0) {
-                extern Z3_func_decl fact_func;
-                if (!fact_func) {
-                    fprintf(stderr, "ast_to_z3: fact_func not initialized\n");
-                    return NULL;
-                }
-                Z3_ast arg = ast_to_z3(ctx, node->function.arg1, var_cache);
-                if (!arg) {
-                    fprintf(stderr, "ast_to_z3: NULL argument to fact function\n");
-                    return NULL;
-                }
-                return Z3_mk_app(ctx, fact_func, 1, &arg);
-            }
+			if (strcmp(node->binary_op.op, "and") == 0) return Z3_mk_and(ctx, 2, args);
+			if (strcmp(node->binary_op.op, "or") == 0) return Z3_mk_or(ctx, 2, args);
+			if (strcmp(node->binary_op.op, "->") == 0) return Z3_mk_implies(ctx, left, right);
 
-            fprintf(stderr, "ast_to_z3: Unknown function '%s'\n", node->function.fname);
-            return NULL;
-        }
 
-        default:
-            fprintf(stderr, "Unsupported AST node type in Z3 converter: %d\n", node->type);
-            return NULL;
-    }
+			fprintf(stderr, "ast_to_z3: Unknown binary op '%s'\n", node->binary_op.op);
+			return NULL;
+		}
+
+		// ---------------- Unary operator ----------------
+		case NODE_UNARY_OP: {
+			Z3_ast child = ast_to_z3(ctx, node->unary_op.child, var_cache);
+			
+			if (!child) {
+				fprintf(stderr, "ast_to_z3: NULL child in unary op\n");
+				return NULL;
+			}
+			
+			if (strcmp(node->unary_op.op, "not") == 0) return Z3_mk_not(ctx, child);
+
+			fprintf(stderr, "ast_to_z3: Unknown unary op '%s'\n", node->unary_op.op);
+			return NULL;
+		}
+
+		// ---------------- Function call ----------------
+		case NODE_FUNCTION: {
+			if (strcmp(node->function.fname, "fact") == 0) {
+				extern Z3_func_decl fact_func;
+				if (!fact_func) {
+					fprintf(stderr, "ast_to_z3: fact_func not initialized\n");
+					return NULL;
+				}
+
+				Z3_ast arg = ast_to_z3(ctx, node->function.arg1, var_cache);
+				if (!arg) {
+					fprintf(stderr, "ast_to_z3: NULL argument to fact function\n");
+					return NULL;
+				}
+
+				// Apply fact(arg)
+				return Z3_mk_app(ctx, fact_func, 1, &arg);
+			}
+
+			fprintf(stderr, "ast_to_z3: Unknown function '%s'\n", node->function.fname);
+			return NULL;
+		}
+
+		// ---------------- Fallback ----------------
+		default:
+			fprintf(stderr, "Unsupported AST node type in Z3 converter: %d\n", node->type);
+			return NULL;
+	}
 }

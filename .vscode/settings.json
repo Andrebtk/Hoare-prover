@@ -2,6 +2,14 @@
     "files.associations": {
         "*.y": "c",
         "z3.h": "c",
-        "vector": "c"
+        "vector": "c",
+        "array": "c",
+        "functional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "*.t": "c"
     }
 }

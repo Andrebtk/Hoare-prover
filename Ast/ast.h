@@ -21,7 +21,6 @@ typedef struct ASTNode_ {
 			struct ASTNode_* expr;
 		} Assign;
 
-
 		struct {
 			char* fname;
 			struct ASTNode_* arg1;
@@ -40,7 +39,6 @@ typedef struct ASTNode_ {
 			struct ASTNode_* variant;
 			DLL* block_main;
 		} While;
-
 
 		struct {
 			char *op;
@@ -93,16 +91,12 @@ void DLL_append(DLL* list, ASTNode* node);
 void print_ASTNode(ASTNode* node, int iter, int prof);
 void print_line_linkedlist(line_linkedlist* list, int prof);
 void print_DLL(DLL* dll, int prof, int pre);
-//void print_AST_formula(ASTNode* node);
 
 ASTNode* substitute(const ASTNode* node, const char* id, const ASTNode* repl);
 ASTNode* clone_node(const ASTNode* orig);
 
-
-
 void free_ll(line_linkedlist* l);
 void free_DLL(DLL* l);
 void free_ASTNode(ASTNode* node);
-
 
 #endif

@@ -3,8 +3,8 @@
 
 #include "ast.h"
 
-#define RED     "\033[31m"      /* Red */
-#define GREEN   "\033[32m"      /* Green */
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
 #define RESET   "\033[0m"
 
 
@@ -18,7 +18,5 @@ ASTNode* hoare_WhileRule(ASTNode* node, ASTNode* post);
 
 int evaluate_formula(ASTNode* node);
 int evaluate_expr (ASTNode* node);
-
-//bool is_tautology(ASTNode* node);
 
 #endif
