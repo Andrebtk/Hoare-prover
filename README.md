@@ -3,6 +3,23 @@
 A small Hoare-logic verifier for a simple imperative programs annotated with `PRECONDITION:`, `POSTCONDITION:` and `while` loops with `INVARIANT(...)` and `VARIANT(...)`.  
 Parses a toy imperative language, builds an AST, generates verification conditions (VCs) with a backward Hoare-style prover (`hoare_prover`) and discharges them with Z3 (via the Z3 C API).
 
+
+# Overview & goals
+Purpose. The verifier helps you mechanically check correctness of small imperative programs expressed with pre/postconditions and loop invariants. It’s intended for education, prototyping verification ideas, and testing invariants against an SMT backend.
+
+### Key capabilities.
+- Parse small imperative programs annotated with PRECONDITION: / POSTCONDITION: and loops annotated with INVARIANT(...) and VARIANT(...).
+- Translate the program into an AST.
+- Compute verification conditions using weakest-precondition style rules.
+- Translate generated VCs into Z3 formulas and check validity using the Z3 C API.
+- Support basic arithmetic and boolean operators, min, max, and a fact function modeled in Z3.
+
+### What it is not.
+- Not a full programming language verifier (no pointers, arrays, concurrency).
+- Not an automatic invariant generator — invariants must be provided by the user.
+- An educational / prototyping tool — performance and completeness are limited by language support and the underlying SMT solver.
+
+
 ## Quick start
 
 ### Requirements
@@ -67,6 +84,42 @@ Backward proof:
 2. After `y = x;` → `wp = (x >= 1)`.
 3. After `x = x + 1;` → `wp = (x + 1 >= 1)` → `x >= 0`.
 VC: `PRE -> wp` i.e. `(x >= 0) -> (x >= 0)` (valid).
+
+### Nested while (sum of triangles)
+
+Program:
+```c
+total = 0;
+i = 1;
+while (i <= n) INVARIANT (
+    total == (i - 1) * i * (i + 1) / 6
+) VARIANT (n - i + 1) {
+    j = 1;
+    while (j <= i) INVARIANT (
+        total == ((i - 1) * i * (i + 1) / 6) + (j - 1) * i
+    ) VARIANT (i - j + 1) {
+        total = total + i;
+        j = j + 1;
+    }
+    i = i + 1;
+}
+
+PRECONDITION: n >= 0
+POSTCONDITION: total == n * (n + 1) * (n + 2) / 6
+```
+
+Explanation:
+
+- Outer loop invariant encodes that at iteration ```i```, the sum so far is ```(𝑖−1)⋅𝑖⋅(𝑖+1)/6```, the sum of first ```i-1``` triangular numbers.
+- Inner loop invariant refines this to accumulate ```i``` exactly```j-1``` times.
+- Variants ```(n - i + 1 and i - j + 1)``` prove termination.
+- On loop exit ```(i = n+1)```, the invariant gives exactly the desired closed form: ```total == n*(n+1)*(n+2)/6```
+
+Thus the Hoare triple is valid:
+```c
+{n >= 0}  program  {total == n*(n+1)*(n+2)/6}
+```
+
 
 ## Mapping to Hoare rules (short)
 
