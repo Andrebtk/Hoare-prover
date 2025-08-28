@@ -9,7 +9,9 @@ Purpose. The verifier helps you mechanically check correctness of small imperati
 
 ### Key capabilities.
 - Parse small imperative programs annotated with PRECONDITION: / POSTCONDITION: and loops annotated with INVARIANT(...) and VARIANT(...).
-- Translate the program into an AST.
+- Translate the program into an AST
+   - Parser generation: bison
+   - Lexer generation: flex   
 - Compute verification conditions using weakest-precondition style rules.
 - Translate generated VCs into Z3 formulas and check validity using the Z3 C API.
 - Support basic arithmetic and boolean operators, min, max, and a fact function modeled in Z3.
