@@ -1,6 +1,6 @@
 # Hoare Verifier — README
 
-Tiny Hoare-logic verifier for small imperative programs annotated with `PRECONDITION:`, `POSTCONDITION:` and `while` loops with `INVARIANT(...)` and `VARIANT(...)`.  
+A small Hoare-logic verifier for a simple imperative programs annotated with `PRECONDITION:`, `POSTCONDITION:` and `while` loops with `INVARIANT(...)` and `VARIANT(...)`.  
 Parses a toy imperative language, builds an AST, generates verification conditions (VCs) with a backward Hoare-style prover (`hoare_prover`) and discharges them with Z3 (via the Z3 C API).
 
 ## Quick start
